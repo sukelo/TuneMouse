@@ -1,0 +1,30 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+
+# SwiftPM
+.build/
+.swiftpm/
+Package.resolved
+
+# Xcode (프로덕션 단계 전환 대비)
+*.xcodeproj/*
+!*.xcodeproj/project.pbxproj
+!*.xcodeproj/xcshareddata/
+xcuserdata/
+*.xcuserstate
+DerivedData/
+*.xcscmblueprint
+*.xccheckout
+
+# 빌드 산출물 / 서명
+*.app
+*.dSYM/
+build/
+
+# 환경 / 비밀
+.env
+*.p12
+*.cer
