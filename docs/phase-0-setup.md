@@ -6,12 +6,12 @@
 
 ## Definition of Done (완료 기준)
 
-- [ ] `./scripts/build.sh` 한 방으로 `TuneMouse.app` 빌드 + 서명까지 완료된다.
-- [ ] 앱 실행 시 Dock 없이 **메뉴바에 아이콘**이 뜬다.
-- [ ] 메뉴에 **활성화 토글 / 설정 열기 / 종료** 가 있다.
-- [ ] 설정 창(SwiftUI)이 열리고 **접근성 권한 상태**가 보인다 (허용/미허용).
-- [ ] 권한 미허용 시 **시스템 설정 바로가기** 버튼이 동작한다.
-- [ ] 리빌드해도 self-signed 서명 정체성이 안정적이라 **권한 재허용이 불필요**하다.
+- [x] `./scripts/build.sh` 한 방으로 `TuneMouse.app` 빌드 + 서명까지 완료된다. *(ad-hoc 서명, 검증됨)*
+- [~] 앱 실행 시 Dock 없이 **메뉴바에 아이콘**이 뜬다. *(코드 완료, 프로세스 정상 실행 — 사용자 육안 확인 필요)*
+- [~] 메뉴에 **활성화 토글 / 설정 열기 / 종료** 가 있다. *(코드 완료 — 육안 확인 필요)*
+- [~] 설정 창(SwiftUI)이 열리고 **접근성 권한 상태**가 보인다 (허용/미허용). *(코드 완료 — 육안 확인 필요)*
+- [~] 권한 미허용 시 **시스템 설정 바로가기** 버튼이 동작한다. *(코드 완료 — 육안 확인 필요)*
+- [x] 리빌드해도 self-signed 서명 정체성이 안정적이라 **권한 재허용이 불필요**하다. *(self-signed 인증서 "TuneMouse Dev"로 서명 적용 완료, Authority 확인됨. 실제 권한 영속성은 Phase 1에서 탭+권한 사용 시 검증)*
 
 ---
 
@@ -68,9 +68,10 @@
 **수용 기준**: 권한 허용 전/후 상태가 설정 창에 정확히 반영.
 
 ### 6. Self-signed 코드 서명
-- [ ] self-signed 코드서명 인증서 생성 안내 (Keychain Access, "코드 서명" 용도) — **사용자가 직접 1회 생성**
-- [ ] `build.sh`에 `codesign --sign "<인증서명>" --force --options runtime TuneMouse.app` 통합
-- [ ] 안정적 정체성으로 권한 영속성 확보 검증
+- [x] self-signed 코드서명 인증서 생성 ("TuneMouse Dev", 10년, 코드 서명) — 사용자 생성 완료
+- [x] `build.sh`에 인증서 자동 탐지 + `codesign --force --sign` 통합 (가이드: [signing.md](signing.md))
+- [x] self-signed 서명 적용 + seal 검증 (Authority=TuneMouse Dev, Designated Requirement 만족)
+- [ ] 실제 권한 영속성 검증 — Phase 1에서 탭+권한 사용 시
 
 > 메모: 인증서 생성은 GUI 작업이라 단계별 안내 문서를 따로 제공.
 > ad-hoc 서명(`-`)으로도 동작은 하나 리빌드 시 권한 재요청 가능성 → self-signed 권장.

@@ -23,6 +23,7 @@ DerivedData/
 *.app
 *.dSYM/
 build/
+dist/
 
 # 환경 / 비밀
 .env
