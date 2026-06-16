@@ -7,6 +7,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var settingsWindow: SettingsWindowController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        Log.app.notice("앱 시작 (accessory 정책)")
         statusController = StatusItemController(
             appState: appState,
             onOpenSettings: { [weak self] in self?.openSettings() },

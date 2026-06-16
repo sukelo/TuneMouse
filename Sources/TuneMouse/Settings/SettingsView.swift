@@ -17,6 +17,10 @@ struct SettingsView: View {
             Divider()
 
             Toggle("기능 활성화", isOn: $appState.isEnabled)
+            Toggle("로그인 시 자동 시작", isOn: Binding(
+                get: { appState.launchAtLogin },
+                set: { appState.setLaunchAtLogin($0) }
+            ))
 
             Divider()
 
@@ -25,7 +29,11 @@ struct SettingsView: View {
             Spacer()
         }
         .padding(20)
-        .frame(width: 440, height: 300)
+        .frame(width: 440, height: 320)
+        .onAppear {
+            appState.refreshAccessibility()
+            appState.refreshLaunchAtLogin()
+        }
         .onReceive(permissionTimer) { _ in
             appState.refreshAccessibility()
         }

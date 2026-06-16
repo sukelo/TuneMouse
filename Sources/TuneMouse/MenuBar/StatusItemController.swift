@@ -39,7 +39,8 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         let menu = NSMenu()
         menu.delegate = self
 
-        let header = NSMenuItem(title: "TuneMouse", action: nil, keyEquivalent: "")
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
+        let header = NSMenuItem(title: "TuneMouse v\(version)", action: nil, keyEquivalent: "")
         header.isEnabled = false
         menu.addItem(header)
         menu.addItem(.separator())
@@ -73,6 +74,9 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         let desc = appState.isEnabled ? "TuneMouse (켜짐)" : "TuneMouse (꺼짐)"
         button.image = NSImage(systemSymbolName: symbol, accessibilityDescription: desc)
         button.image?.isTemplate = true
+        // 꺼짐 상태를 흐리게 해서 시각적으로 구분
+        button.alphaValue = appState.isEnabled ? 1.0 : 0.4
+        button.toolTip = desc
     }
 
     private func refreshDynamicItems() {

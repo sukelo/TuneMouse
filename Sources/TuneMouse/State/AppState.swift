@@ -11,11 +11,17 @@ final class AppState: ObservableObject {
 
     /// 전체 기능 on/off. 패닉 키/메뉴바 토글이 이 값을 건드린다. (지금은 상태만, 기능 연결은 Phase 1+)
     @Published var isEnabled: Bool {
-        didSet { UserDefaults.standard.set(isEnabled, forKey: Keys.isEnabled) }
+        didSet {
+            UserDefaults.standard.set(isEnabled, forKey: Keys.isEnabled)
+            Log.menu.notice("기능 활성화 토글: \(self.isEnabled, privacy: .public)")
+        }
     }
 
     /// 접근성 권한 허용 여부 (읽기 전용, refreshAccessibility로 갱신)
     @Published private(set) var hasAccessibility: Bool = false
+
+    /// 로그인 시 자동 시작 여부. 진실 소스는 SMAppService — setLaunchAtLogin으로만 변경.
+    @Published private(set) var launchAtLogin: Bool = false
 
     init() {
         // 기본값: 활성화 = true (최초 실행 시)
@@ -24,12 +30,26 @@ final class AppState: ObservableObject {
         }
         isEnabled = UserDefaults.standard.bool(forKey: Keys.isEnabled)
         hasAccessibility = AccessibilityPermission.isTrusted()
+        launchAtLogin = LoginItemManager.isEnabled
     }
 
     func refreshAccessibility() {
         let trusted = AccessibilityPermission.isTrusted()
         if trusted != hasAccessibility {
             hasAccessibility = trusted
+            Log.permission.notice("접근성 권한 상태 변경: \(trusted, privacy: .public)")
+        }
+    }
+
+    func setLaunchAtLogin(_ enabled: Bool) {
+        LoginItemManager.setEnabled(enabled)
+        launchAtLogin = LoginItemManager.isEnabled // 실제 상태 반영
+    }
+
+    func refreshLaunchAtLogin() {
+        let actual = LoginItemManager.isEnabled
+        if actual != launchAtLogin {
+            launchAtLogin = actual
         }
     }
 }

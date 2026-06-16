@@ -79,12 +79,19 @@
 **수용 기준**: 리빌드 후에도 접근성 권한 유지.
 
 ### 7. 실행/디버그 워크플로우
-- [ ] `scripts/build.sh` — 빌드 + 번들 조립 + 서명
-- [ ] `scripts/run.sh` — 기존 인스턴스 종료 후 `.app` 실행 (빠른 반복용)
-- [ ] 로그 확인 방법 정리 (Console.app / `os.Logger`)
-- [ ] README에 개발 루프 1줄 정리
+- [x] `scripts/build.sh` — 빌드 + 번들 조립 + 서명 (인증서 자동 탐지)
+- [x] `scripts/run.sh` — 기존 인스턴스 종료 후 `.app` 실행 (빠른 반복용)
+- [x] 로그 토대 (`os.Logger`, `Support/Log.swift`) — Console.app / `log stream` 으로 확인, 실제 출력 검증됨
+- [x] README에 개발 루프/요구사항 정리
 
-**수용 기준**: `build.sh && run.sh` 로 변경→실행 반복 가능.
+**수용 기준**: `build.sh && run.sh` 로 변경→실행 반복 가능. ✅
+
+### (추가) Phase 0 마무리 다듬기 — [phase-0-refinements.md](phase-0-refinements.md)
+- [x] 로그인 시 자동 시작 (`SMAppService`) + 설정창 토글
+- [x] 로깅 토대 (`os.Logger`)
+- [x] README
+- [x] 폴리시: 꺼짐 아이콘 흐리게 + tooltip, 메뉴 헤더 버전 표시
+- [ ] (Phase 1로 이월) 패닉 키, 활성화 토글 실제 동작
 
 ---
 
