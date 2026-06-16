@@ -80,6 +80,14 @@ final class EventTapController {
         }
     }
 
+    /// 설치돼 있는데 OS가 탭을 비활성화했으면 재활성화 (워치독 안전망).
+    /// 콜백의 tapDisabled 신호를 놓치는 드문 경우 대비.
+    func ensureEnabledIfInstalled() {
+        guard let tapPort, !CGEvent.tapIsEnabled(tap: tapPort) else { return }
+        CGEvent.tapEnable(tap: tapPort, enable: true)
+        Log.tap.notice("워치독: 탭 비활성 감지 → 재활성화")
+    }
+
     /// 콜백 핫패스. C 트램펄린에서 호출.
     fileprivate func handle(type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
         // 탭이 OS에 의해 비활성화되면 즉시 재활성화 (안전 설계)
@@ -98,9 +106,11 @@ final class EventTapController {
 
         switch processor.process(type: type, event: event) {
         case .passUnchanged:
+            // 원본(또는 in-place 수정된 동일 객체) 통과 — 시스템이 이미 소유
             return Unmanaged.passUnretained(event)
         case .transformed(let newEvent):
-            return Unmanaged.passUnretained(newEvent)
+            // 새로 생성한 이벤트는 소유권을 시스템에 넘김 → passRetained (+1)
+            return Unmanaged.passRetained(newEvent)
         case .discard:
             return nil
         }

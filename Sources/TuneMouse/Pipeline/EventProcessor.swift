@@ -2,8 +2,8 @@ import CoreGraphics
 
 /// 이벤트 처리 결과. 세 축(스크롤/액션/오버라이드)이 이 타입을 통해 결과를 돌려준다.
 enum ProcessResult {
-    case passUnchanged          // 원본 그대로 통과
-    case transformed(CGEvent)   // 변형된 이벤트로 교체
+    case passUnchanged          // 원본 통과. **in-place 수정(필드 변경)도 이 케이스 사용** — 동일 객체라 소유권 이동 없음
+    case transformed(CGEvent)   // 새로 생성한 이벤트로 교체 (시스템이 소유권을 가져감 → passRetained 처리됨)
     case discard                // 이벤트 소비(재전송 안 함)
 }
 

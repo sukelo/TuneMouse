@@ -32,8 +32,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         // 탭은 (기능 활성화 && 접근성 권한)일 때만 설치한다.
+        // DispatchQueue.main: 메뉴 트래킹 등 비기본 런루프 모드에서도 지연 없이 전달.
         Publishers.CombineLatest(appState.$isEnabled, appState.$hasAccessibility)
-            .receive(on: RunLoop.main)
+            .receive(on: DispatchQueue.main)
             .sink { [weak self] enabled, hasAccessibility in
                 Log.tap.notice("상태 갱신: enabled=\(enabled, privacy: .public) hasAX=\(hasAccessibility, privacy: .public)")
                 self?.tapController.setEnabled(enabled && hasAccessibility)
@@ -46,6 +47,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         })
         hotKey.register()
         panicHotKey = hotKey
+
+        // 워치독(3초): 런타임 권한 변화 반영(F2) + 탭이 죽었으면 재활성화(F4)
+        Timer.publish(every: 3, on: .main, in: .common)
+            .autoconnect()
+            .sink { [weak self] _ in self?.watchdogTick() }
+            .store(in: &cancellables)
+    }
+
+    /// 주기적 건강 점검. refreshAccessibility가 권한 변화를 @Published로 알리면
+    /// 위 CombineLatest가 설치/해제를 처리한다. 탭이 켜져 있어야 하는데 죽었으면 복구.
+    private func watchdogTick() {
+        appState.refreshAccessibility()
+        if appState.isEnabled && appState.hasAccessibility {
+            tapController.ensureEnabledIfInstalled()
+        }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
