@@ -1,17 +1,21 @@
 import CoreGraphics
 
-/// 스크롤 방향 반전. 세로(axis1)/가로(axis2) 각각 토글.
+/// 스크롤 방향 반전. 세로(axis1)/가로(axis2) 각각 토글. 앱별 설정 해석(통과 시 skip).
 /// line/point/fixedPt 세 delta 필드를 함께 부호 반전(일부만 바꾸면 앱별 회귀).
 final class ScrollDirectionTransformer: EventTransformer {
-    var invertVertical = false
-    var invertHorizontal = false
+    var settings = ScrollSettings()
 
-    var isEnabled: Bool { invertVertical || invertHorizontal }
+    var isEnabled: Bool {
+        settings.global.invertVertical || settings.global.invertHorizontal
+            || settings.perApp.values.contains { $0.invertVertical || $0.invertHorizontal }
+    }
 
     func transform(event: CGEvent, type: CGEventType, context: ProcessingContext) -> ProcessResult {
         guard type == .scrollWheel else { return .passUnchanged }
-        if invertVertical { negate(event, axis: .vertical) }
-        if invertHorizontal { negate(event, axis: .horizontal) }
+        let config = settings.resolved(forBundleID: context.frontmostBundleID)
+        guard !config.passthrough else { return .passUnchanged }
+        if config.invertVertical { negate(event, axis: .vertical) }
+        if config.invertHorizontal { negate(event, axis: .horizontal) }
         return .passUnchanged
     }
 

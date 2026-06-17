@@ -20,7 +20,7 @@ final class SmoothScrollTransformer: EventTransformer {
         guard type == .scrollWheel else { return .passUnchanged }
 
         let config = settings.resolved(forBundleID: context.frontmostBundleID)
-        guard config.smoothEnabled else { return .passUnchanged }
+        guard !config.passthrough, config.smoothEnabled else { return .passUnchanged }
 
         let lineV = Double(event.getIntegerValueField(.scrollWheelEventDeltaAxis1))
         let lineH = Double(event.getIntegerValueField(.scrollWheelEventDeltaAxis2))

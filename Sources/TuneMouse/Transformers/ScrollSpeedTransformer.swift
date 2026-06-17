@@ -1,25 +1,29 @@
 import CoreGraphics
 
-/// 스크롤 속도 배율. delta를 multiplier배. 분수 배율에서 정수 라인 delta가 0이 되는 문제는
-/// 축별 누적 잔차(residual)로 보정해 장기적으로 비율을 보존한다.
+/// 스크롤 속도 배율. 앱별 설정 해석(통과 시 skip). 분수 배율의 0-delta 문제는 축별 누적 잔차로 보정.
 final class ScrollSpeedTransformer: EventTransformer {
-    var multiplier: Double = 1.0
+    var settings = ScrollSettings()
 
-    var isEnabled: Bool { multiplier != 1.0 }
+    var isEnabled: Bool {
+        settings.global.speedMultiplier != 1.0
+            || settings.perApp.values.contains { $0.speedMultiplier != 1.0 }
+    }
 
     private var residualVertical: Double = 0
     private var residualHorizontal: Double = 0
 
     func transform(event: CGEvent, type: CGEventType, context: ProcessingContext) -> ProcessResult {
         guard type == .scrollWheel else { return .passUnchanged }
-        scale(event, axis: .vertical, residual: &residualVertical)
-        scale(event, axis: .horizontal, residual: &residualHorizontal)
+        let config = settings.resolved(forBundleID: context.frontmostBundleID)
+        guard !config.passthrough, config.speedMultiplier != 1.0 else { return .passUnchanged }
+        scale(event, axis: .vertical, multiplier: config.speedMultiplier, residual: &residualVertical)
+        scale(event, axis: .horizontal, multiplier: config.speedMultiplier, residual: &residualHorizontal)
         return .passUnchanged
     }
 
     private enum Axis { case vertical, horizontal }
 
-    private func scale(_ event: CGEvent, axis: Axis, residual: inout Double) {
+    private func scale(_ event: CGEvent, axis: Axis, multiplier: Double, residual: inout Double) {
         let line: CGEventField = axis == .vertical ? .scrollWheelEventDeltaAxis1 : .scrollWheelEventDeltaAxis2
         let point: CGEventField = axis == .vertical ? .scrollWheelEventPointDeltaAxis1 : .scrollWheelEventPointDeltaAxis2
         let fixed: CGEventField = axis == .vertical ? .scrollWheelEventFixedPtDeltaAxis1 : .scrollWheelEventFixedPtDeltaAxis2

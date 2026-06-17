@@ -78,11 +78,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func applyScrollSettings(_ settings: ScrollSettings) {
-        let g = settings.global
-        scrollDirection.invertVertical = g.invertVertical
-        scrollDirection.invertHorizontal = g.invertHorizontal
-        scrollSpeed.multiplier = g.speedMultiplier
-        smoothScroll.settings = settings // 부드러움은 앱별 해석 위해 전체 전달
+        // 모든 스크롤 변환기가 앱별 해석을 하도록 전체 설정 전달
+        scrollDirection.settings = settings
+        scrollSpeed.settings = settings
+        smoothScroll.settings = settings
     }
 
     /// 주기적 건강 점검. refreshAccessibility가 권한 변화를 @Published로 알리면

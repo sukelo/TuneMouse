@@ -28,6 +28,10 @@ struct SettingsView: View {
 
                 Divider()
 
+                AppScrollOverrideSection(store: scrollSettings)
+
+                Divider()
+
                 ButtonMappingSection(store: buttonMappings)
 
                 Divider()

@@ -11,14 +11,17 @@ struct ScrollConfig: Codable, Equatable {
     var smoothStep = 60.0       // 노치당 픽셀 거리
     var smoothness = 0.5        // 0..1, 높을수록 부드럽고 길게
 
+    // 앱별 예외 (Phase 5) — true면 그 앱에서 스크롤 가공 전체 skip
+    var passthrough = false
+
     enum CodingKeys: String, CodingKey {
         case invertVertical, invertHorizontal, speedMultiplier
-        case smoothEnabled, smoothStep, smoothness
+        case smoothEnabled, smoothStep, smoothness, passthrough
     }
 
     init() {}
 
-    // 구버전 저장본(부드러움 키 없음) 호환: 누락 키는 기본값.
+    // 구버전 저장본(누락 키) 호환: 누락 키는 기본값.
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         invertVertical = try c.decodeIfPresent(Bool.self, forKey: .invertVertical) ?? false
@@ -27,6 +30,7 @@ struct ScrollConfig: Codable, Equatable {
         smoothEnabled = try c.decodeIfPresent(Bool.self, forKey: .smoothEnabled) ?? false
         smoothStep = try c.decodeIfPresent(Double.self, forKey: .smoothStep) ?? 60.0
         smoothness = try c.decodeIfPresent(Double.self, forKey: .smoothness) ?? 0.5
+        passthrough = try c.decodeIfPresent(Bool.self, forKey: .passthrough) ?? false
     }
 }
 
