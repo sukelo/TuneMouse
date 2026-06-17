@@ -36,17 +36,69 @@ final class ShortcutRecorder: ObservableObject {
     }
 }
 
-/// 버튼 매핑 편집 섹션(v1). 버튼 번호 + 동작 프리셋 + 적용 범위(글로벌/앱별)를 골라 추가.
-/// 커스텀 단축키 캡처·버튼 캡처·홀드/더블/드래그는 후속.
+/// 마우스 버튼 캡처: 녹화 모드에서 다음 `otherMouseDown`을 잡아 버튼 번호로 변환.
+/// **좌/우 클릭은 잡지 않는다**(.otherMouseDown만 감시 → 휠클릭=2, 옆버튼=3,4,… 만 캡처).
+/// 이로써 사용자가 CG 번호 체계(0-based)를 몰라도 실제 버튼을 눌러 지정할 수 있다.
+@MainActor
+final class MouseButtonRecorder: ObservableObject {
+    @Published var button: Int?
+    @Published var isRecording = false
+    private var monitor: Any?
+
+    func start() {
+        guard !isRecording else { return }
+        isRecording = true
+        button = nil
+        monitor = NSEvent.addLocalMonitorForEvents(matching: [.otherMouseDown]) { [weak self] event in
+            self?.capture(event)
+            return nil // 이벤트 소비
+        }
+    }
+
+    func stop() {
+        if let monitor { NSEvent.removeMonitor(monitor) }
+        monitor = nil
+        isRecording = false
+    }
+
+    private func capture(_ event: NSEvent) {
+        button = event.buttonNumber
+        stop()
+    }
+}
+
+/// 버튼 번호(CGEvent 0-based) → 사람이 읽는 이름. 옆 버튼의 흔한 용도까지 힌트로.
+enum MouseButtonNames {
+    static func name(_ n: Int) -> String {
+        switch n {
+        case 2: return "휠 클릭"
+        case 3: return "옆 버튼 ①"
+        case 4: return "옆 버튼 ②"
+        default: return "버튼 \(n)"
+        }
+    }
+
+    static func hint(_ n: Int) -> String? {
+        switch n {
+        case 2: return "휠(가운데) 클릭"
+        case 3: return "보통 ‘뒤로’ 버튼"
+        case 4: return "보통 ‘앞으로’ 버튼"
+        default: return nil
+        }
+    }
+}
+
+/// 버튼 매핑 편집 섹션(v1). 버튼을 직접 눌러 지정 + 동작(프리셋/단축키) + 적용 범위(글로벌/앱별).
+/// 홀드/더블/드래그 트리거는 후속.
 struct ButtonMappingSection: View {
     @ObservedObject var store: ButtonMappingStore
 
     @State private var scopeIsGlobal = true
     @State private var bundleID = ""
-    @State private var button = 4
     @State private var preset: ActionPreset = .back
     @State private var usePreset = true
     @StateObject private var recorder = ShortcutRecorder()
+    @StateObject private var buttonRecorder = MouseButtonRecorder()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -82,7 +134,7 @@ struct ButtonMappingSection: View {
 
     private func row(scope: String, mapping: ButtonMapping, delete: @escaping () -> Void) -> some View {
         HStack {
-            Text("\(scope) · 버튼 \(mapping.trigger.button) → \(actionLabel(mapping.action))")
+            Text("\(scope) · \(MouseButtonNames.name(Int(mapping.trigger.button))) → \(actionLabel(mapping.action))")
                 .font(.callout)
             Spacer()
             Button(action: delete) { Image(systemName: "trash") }
@@ -107,8 +159,16 @@ struct ButtonMappingSection: View {
                 }
             }
 
-            Picker("버튼", selection: $button) {
-                ForEach(3...9, id: \.self) { Text("버튼 \($0)").tag($0) }
+            VStack(alignment: .leading, spacing: 4) {
+                Button(buttonRecorderLabel) {
+                    buttonRecorder.isRecording ? buttonRecorder.stop() : buttonRecorder.start()
+                }
+                if let b = buttonRecorder.button, let hint = MouseButtonNames.hint(b) {
+                    Text(hint).font(.caption).foregroundStyle(.secondary)
+                } else if !buttonRecorder.isRecording && buttonRecorder.button == nil {
+                    Text("리매핑할 옆 버튼/휠 클릭을 누르세요 (좌·우 클릭은 안 잡힘)")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
             }
 
             Picker("동작 종류", selection: $usePreset) {
@@ -130,6 +190,12 @@ struct ButtonMappingSection: View {
         }
     }
 
+    private var buttonRecorderLabel: String {
+        if buttonRecorder.isRecording { return "버튼을 누르세요… (취소하려면 다시 클릭)" }
+        if let b = buttonRecorder.button { return "지정됨: \(MouseButtonNames.name(b))" }
+        return "버튼 지정하기"
+    }
+
     private var recorderLabel: String {
         if recorder.isRecording { return "키를 누르세요… (취소하려면 다시 클릭)" }
         if let combo = recorder.combo { return "단축키: \(combo.displayString)" }
@@ -137,6 +203,7 @@ struct ButtonMappingSection: View {
     }
 
     private var addDisabled: Bool {
+        if buttonRecorder.button == nil { return true }
         if !scopeIsGlobal && bundleID.isEmpty { return true }
         if !usePreset && recorder.combo == nil { return true }
         return false
@@ -145,6 +212,7 @@ struct ButtonMappingSection: View {
     // MARK: 동작
 
     private func add() {
+        guard let button = buttonRecorder.button else { return }
         let action: ActionType
         if usePreset {
             action = preset.action
@@ -160,6 +228,7 @@ struct ButtonMappingSection: View {
             store.mappings.perApp[bundleID, default: []].append(mapping)
         }
         recorder.combo = nil
+        buttonRecorder.button = nil
     }
 
     private func delete(_ mapping: ButtonMapping, bundleID: String?) {
