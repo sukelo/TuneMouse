@@ -11,10 +11,14 @@ struct AppScrollOverrideSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("앱별 스크롤 설정").font(.headline)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("앱별 스크롤 설정").font(.headline)
+                Text("특정 앱만 다르게 (없으면 위 기본 설정 사용)")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
 
             if store.settings.perApp.isEmpty {
-                Text("앱별 설정 없음").font(.caption).foregroundStyle(.secondary)
+                Text("아래에서 앱을 골라 추가하세요").font(.caption).foregroundStyle(.secondary)
             } else {
                 ForEach(store.settings.perApp.sorted { $0.key < $1.key }, id: \.key) { id, config in
                     DisclosureGroup {
@@ -62,13 +66,13 @@ struct AppScrollOverrideSection: View {
 
     /// 헤더에 한 줄 상태 요약.
     private func summary(_ c: ScrollConfig) -> String {
-        if c.passthrough { return "통과" }
+        if c.passthrough { return "이 앱에서는 끔" }
         var parts: [String] = []
-        if c.invertVertical || c.invertHorizontal { parts.append("반전") }
+        if c.invertVertical || c.invertHorizontal { parts.append("방향 뒤집기") }
         if c.speedMultiplier != 1.0 { parts.append(String(format: "속도 %.2g×", c.speedMultiplier)) }
-        if c.linearScroll { parts.append("가속제거") }
-        if c.smoothEnabled { parts.append("부드러움") }
-        return parts.isEmpty ? "전역과 동일" : parts.joined(separator: "·")
+        if c.linearScroll { parts.append("균일 스크롤") }
+        if c.smoothEnabled { parts.append("부드럽게") }
+        return parts.isEmpty ? "기본과 동일" : parts.joined(separator: "·")
     }
 
     private var runningApps: [(id: String, name: String)] {

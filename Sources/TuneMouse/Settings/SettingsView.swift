@@ -14,29 +14,32 @@ struct SettingsView: View {
                 Text("TuneMouse")
                     .font(.title2).bold()
 
-                Divider()
+                // 권한 미허용이면 가장 먼저 눈에 띄게 — 없으면 아무것도 안 동작하므로 최상단.
+                permissionBanner
 
-                Toggle("기능 활성화", isOn: $appState.isEnabled)
-                Toggle("로그인 시 자동 시작", isOn: Binding(
-                    get: { appState.launchAtLogin },
-                    set: { appState.setLaunchAtLogin($0) }
-                ))
+                masterSwitch
 
                 Divider()
 
-                scrollSection
+                // 마스터 스위치가 꺼져 있으면 아래 설정은 적용되지 않음을 시각적으로 표시.
+                Group {
+                    if !appState.isEnabled {
+                        Label("꺼져 있어요 — 위 스위치를 켜면 아래 설정이 적용됩니다",
+                              systemImage: "moon.zzz")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
 
-                Divider()
+                    scrollSection
 
-                AppScrollOverrideSection(store: scrollSettings)
+                    Divider()
 
-                Divider()
+                    AppScrollOverrideSection(store: scrollSettings)
 
-                ButtonMappingSection(store: buttonMappings)
+                    Divider()
 
-                Divider()
-
-                permissionSection
+                    ButtonMappingSection(store: buttonMappings)
+                }
+                .opacity(appState.isEnabled ? 1 : 0.5)
             }
             .padding(20)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -51,11 +54,37 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: 마스터 스위치 (전체 기능 on/off)
+
+    @ViewBuilder
+    private var masterSwitch: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Toggle(isOn: $appState.isEnabled) {
+                Text("TuneMouse 켜기").font(.headline)
+                Text("전체 기능 켜기/끄기 · 패닉키 ⌃⌥⌘M")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            Toggle("로그인 시 자동 시작", isOn: Binding(
+                get: { appState.launchAtLogin },
+                set: { appState.setLaunchAtLogin($0) }
+            ))
+            .font(.callout)
+        }
+        .padding(12)
+        .background(Color(nsColor: .controlBackgroundColor))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+
+    // MARK: 스크롤 (전역 기본)
+
     @ViewBuilder
     private var scrollSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("스크롤")
-                .font(.headline)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("스크롤").font(.headline)
+                Text("모든 앱에 적용되는 기본 설정")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
 
             ScrollConfigEditor(config: $scrollSettings.settings.global)
 
@@ -66,28 +95,33 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: 접근성 권한 배너
+
     @ViewBuilder
-    private var permissionSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("접근성 권한")
-                .font(.headline)
-
-            HStack(spacing: 8) {
-                Image(systemName: appState.hasAccessibility
-                      ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
-                    .foregroundStyle(appState.hasAccessibility ? .green : .orange)
-                Text(appState.hasAccessibility ? "허용됨" : "허용 필요")
-                    .foregroundStyle(appState.hasAccessibility ? .primary : .secondary)
-            }
-
-            if !appState.hasAccessibility {
-                Text("마우스 이벤트를 가공하려면 접근성 권한이 필요합니다.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+    private var permissionBanner: some View {
+        if !appState.hasAccessibility {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.orange)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("접근성 권한이 필요합니다").font(.callout).bold()
+                    Text("허용해야 마우스 가공이 동작해요")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer()
                 Button("시스템 설정 열기") {
                     AccessibilityPermission.promptIfNeeded()
                     AccessibilityPermission.openSystemSettings()
                 }
+                .controlSize(.small)
+            }
+            .padding(12)
+            .background(Color.orange.opacity(0.12))
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+        } else {
+            HStack(spacing: 6) {
+                Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+                Text("접근성 권한 허용됨").font(.caption).foregroundStyle(.secondary)
             }
         }
     }
