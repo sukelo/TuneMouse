@@ -6,14 +6,16 @@ import SwiftUI
 final class SettingsWindowController {
     private var window: NSWindow?
     private let appState: AppState
+    private let scrollSettings: ScrollSettingsStore
 
-    init(appState: AppState) {
+    init(appState: AppState, scrollSettings: ScrollSettingsStore) {
         self.appState = appState
+        self.scrollSettings = scrollSettings
     }
 
     func show() {
         if window == nil {
-            let hosting = NSHostingController(rootView: SettingsView(appState: appState))
+            let hosting = NSHostingController(rootView: SettingsView(appState: appState, scrollSettings: scrollSettings))
             let win = NSWindow(contentViewController: hosting)
             win.title = "TuneMouse 설정"
             win.styleMask = [.titled, .closable, .miniaturizable]

@@ -4,15 +4,23 @@ import Combine
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let appState = AppState()
+    private let scrollSettings = ScrollSettingsStore()
     private var statusController: StatusItemController?
     private var settingsWindow: SettingsWindowController?
-    // 처리기 선택: UserDefaults "debugEventLogging" 가 true면 이벤트를 로그로 출력(검증용), 아니면 통과.
-    private let tapController: EventTapController = {
+
+    // 파이프라인 구성요소
+    private let contextProvider = AppContextProvider()
+    private let scrollDirection = ScrollDirectionTransformer()
+    private let scrollSpeed = ScrollSpeedTransformer()
+    private lazy var tapController: EventTapController = {
         let debug = UserDefaults.standard.bool(forKey: "debugEventLogging")
-        let processor: EventProcessor = debug ? DebugLoggingProcessor() : PassthroughProcessor()
-        Log.tap.notice("처리기: \(debug ? "DebugLogging" : "Passthrough", privacy: .public)")
-        return EventTapController(processor: processor)
+        var transformers: [EventTransformer] = [scrollDirection, scrollSpeed]
+        if debug { transformers.append(DebugLoggingTransformer()) } // 맨 뒤 → 변환 후 최종값 로그
+        Log.tap.notice("파이프라인 변환기 \(transformers.count)개 (debug=\(debug, privacy: .public))")
+        let pipeline = EventPipeline(transformers: transformers, contextProvider: contextProvider)
+        return EventTapController(processor: pipeline)
     }()
+
     private var panicHotKey: PanicHotKey?
     private var cancellables = Set<AnyCancellable>()
 
@@ -53,6 +61,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             .autoconnect()
             .sink { [weak self] _ in self?.watchdogTick() }
             .store(in: &cancellables)
+
+        // 스크롤 설정 → 변환기 파라미터 라이브 반영
+        scrollSettings.$settings
+            .sink { [weak self] settings in self?.applyScrollSettings(settings) }
+            .store(in: &cancellables)
+    }
+
+    private func applyScrollSettings(_ settings: ScrollSettings) {
+        let g = settings.global
+        scrollDirection.invertVertical = g.invertVertical
+        scrollDirection.invertHorizontal = g.invertHorizontal
+        scrollSpeed.multiplier = g.speedMultiplier
     }
 
     /// 주기적 건강 점검. refreshAccessibility가 권한 변화를 @Published로 알리면
@@ -71,7 +91,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func openSettings() {
         if settingsWindow == nil {
-            settingsWindow = SettingsWindowController(appState: appState)
+            settingsWindow = SettingsWindowController(appState: appState, scrollSettings: scrollSettings)
         }
         settingsWindow?.show()
     }
