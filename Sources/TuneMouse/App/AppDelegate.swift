@@ -33,6 +33,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Log.app.notice("앱 시작 (accessory 정책)")
         statusController = StatusItemController(
             appState: appState,
+            scrollSettings: scrollSettings,
             onOpenSettings: { [weak self] in self?.openSettings() },
             onQuit: { NSApp.terminate(nil) }
         )

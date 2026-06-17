@@ -59,5 +59,11 @@ Sources/TuneMouse/Settings/SettingsView.swift / 신규 뷰         # 앱별 예�
 ## 실행 순서
 1(passthrough) → 2(변환기 통일) → 통과/앱별 검증(시드) → 3(UI) → 4 최종 검증.
 
+## 후속 — 메뉴바 빠른 통과 토글
+
+데일리 마찰 제거: 설정창을 열지 않고 메뉴바에서 현재 앱의 통과를 켜고 끈다(아이폰 미러링/게임 예외 = 클릭 한 번).
+- `StatusItemController`에 `현재 앱: <이름>` 라벨 + `이 앱에서 스크롤 끄기` 체크 토글. `menuWillOpen`에서 `NSWorkspace.frontmostApplication`로 갱신(상태 메뉴는 accessory 앱을 활성화하지 않아 실제 앞 앱 유지). 우리 앱/미식별 앱은 비활성.
+- 토글은 `scrollSettings.perApp[id].passthrough`를 뒤집음. 새 항목은 전역 복사 기반(Phase 6 모델), 해제로 전역과 같아지면 항목 자동 제거. 변경은 `@Published`로 변환기에 즉시 반영.
+
 ## 금지 구역 메모
 - 배포/공증 스크립트는 손대지 않음. `build.sh`/`run.sh`만 로컬 도구로 갱신 가능.
