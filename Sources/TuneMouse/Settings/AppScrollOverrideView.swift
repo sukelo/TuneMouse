@@ -53,7 +53,8 @@ struct AppScrollOverrideSection: View {
 
     private func configBinding(_ id: String) -> Binding<ScrollConfig> {
         Binding(
-            get: { store.settings.perApp[id] ?? ScrollConfig() },
+            // 항목 제거 직후 stale id로 호출돼도 빈 기본값 대신 전역값으로(교체 모델 일관).
+            get: { store.settings.perApp[id] ?? store.settings.global },
             set: { store.settings.perApp[id] = $0 }
         )
     }

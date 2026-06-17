@@ -5,7 +5,8 @@ import CoreGraphics
 /// 고정 거리(pixelsPerNotch)를 곱해 덮어쓴다 → 굴리는 속도와 무관하게 노치당 거리 일정(윈도우 느낌).
 ///
 /// 체인 순서: 방향 반전 → (여기) 선형화 → 속도 배율 → 부드러움.
-/// 부드러운 스크롤이 켜진 경우 그쪽이 라인 delta만 보고 픽셀을 재구성하므로 이 변환은 무시되어 충돌 없음.
+/// 부드러운 스크롤이 켜져 있으면, 여기서 라인 delta를 ±1로 정규화한 값을 그쪽이 읽으므로
+/// 부드러운 스크롤도 노치당 균일해진다(픽셀 덮어쓰기는 부드러움이 버리지만 라인 정규화는 유효).
 final class ScrollAccelTransformer: EventTransformer {
     var settings = ScrollSettings()
 

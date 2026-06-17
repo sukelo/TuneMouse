@@ -26,6 +26,12 @@ final class ShortcutRecorder: ObservableObject {
     }
 
     private func capture(_ event: NSEvent) {
+        // Esc(modifier 없이)는 캡처 취소로 — 엉뚱한 키가 저장되지 않게. (53 = kVK_Escape)
+        if event.keyCode == 53,
+           event.modifierFlags.intersection([.command, .control, .option, .shift]).isEmpty {
+            stop()
+            return
+        }
         var flags = CGEventFlags()
         if event.modifierFlags.contains(.command) { flags.insert(.maskCommand) }
         if event.modifierFlags.contains(.control) { flags.insert(.maskControl) }

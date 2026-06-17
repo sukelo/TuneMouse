@@ -10,6 +10,9 @@ final class ButtonRemapTransformer: EventTransformer {
     /// down을 소비한 버튼 — up/drag도 소비해야 시스템이 눌린 상태로 고착되지 않음.
     private var consumedButtons = Set<Int64>()
 
+    /// 기능 비활성/탭 해제 시 호출 — 소비 상태 초기화(버튼을 누른 채 꺼졌을 때 잔류 방지).
+    func reset() { consumedButtons.removeAll() }
+
     private static let modifierMask: CGEventFlags = [.maskCommand, .maskControl, .maskAlternate, .maskShift]
 
     func transform(event: CGEvent, type: CGEventType, context: ProcessingContext) -> ProcessResult {

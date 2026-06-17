@@ -51,7 +51,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] enabled, hasAccessibility in
                 Log.tap.notice("상태 갱신: enabled=\(enabled, privacy: .public) hasAX=\(hasAccessibility, privacy: .public)")
-                self?.tapController.setEnabled(enabled && hasAccessibility)
+                let active = enabled && hasAccessibility
+                if !active { self?.buttonRemap.reset() } // 끌 때 소비 상태 초기화(스턱/잔류 방지)
+                self?.tapController.setEnabled(active)
             }
             .store(in: &cancellables)
 
