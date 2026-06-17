@@ -1,8 +1,9 @@
 import SwiftUI
 import AppKit
 
-/// 앱별 스크롤 예외 섹션(v1). 지정 앱에서 스크롤 가공을 끄는 "통과" 토글이 핵심.
-/// (앱별 방향/속도/부드러움 개별 값 편집은 후속 — 엔진은 이미 지원.)
+/// 앱별 스크롤 설정 섹션. 지정 앱에서 방향/속도/가속제거/부드러움을 개별 편집하거나,
+/// "통과"로 스크롤 가공 전체를 끈다. 전역과 동일한 `ScrollConfigEditor`를 공유.
+/// 오버라이드는 글로벌을 **대체**(병합 아님)하므로, 추가 시 **현재 전역값을 복사**해 시작한다.
 struct AppScrollOverrideSection: View {
     @ObservedObject var store: ScrollSettingsStore
 
@@ -10,19 +11,27 @@ struct AppScrollOverrideSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("앱별 스크롤 예외").font(.headline)
+            Text("앱별 스크롤 설정").font(.headline)
 
             if store.settings.perApp.isEmpty {
                 Text("앱별 설정 없음").font(.caption).foregroundStyle(.secondary)
             } else {
-                ForEach(store.settings.perApp.sorted { $0.key < $1.key }, id: \.key) { id, _ in
-                    HStack {
-                        Text(appName(id)).font(.callout)
-                        Spacer()
-                        Toggle("스크롤 끄기", isOn: passthroughBinding(id))
-                        Button { store.settings.perApp[id] = nil } label: { Image(systemName: "trash") }
+                ForEach(store.settings.perApp.sorted { $0.key < $1.key }, id: \.key) { id, config in
+                    DisclosureGroup {
+                        ScrollConfigEditor(config: configBinding(id), includePassthrough: true)
+                            .padding(.top, 4)
+                    } label: {
+                        HStack {
+                            Text(appName(id)).font(.callout)
+                            Spacer()
+                            Text(summary(config))
+                                .font(.caption).foregroundStyle(.secondary)
+                            Button { store.settings.perApp[id] = nil } label: {
+                                Image(systemName: "trash")
+                            }
                             .buttonStyle(.borderless)
                             .foregroundStyle(.secondary)
+                        }
                     }
                 }
             }
@@ -31,29 +40,35 @@ struct AppScrollOverrideSection: View {
                 Picker("앱", selection: $bundleID) {
                     ForEach(runningApps, id: \.id) { app in Text(app.name).tag(app.id) }
                 }
-                Button("예외 추가") { add() }
+                Button("설정 추가") { add() }
                     .disabled(bundleID.isEmpty || store.settings.perApp[bundleID] != nil)
             }
         }
         .onAppear { if bundleID.isEmpty { bundleID = runningApps.first?.id ?? "" } }
     }
 
+    /// 새 오버라이드는 현재 전역값을 복사해 시작(교체 모델 → "전역과 같게 두고 다른 것만 수정").
     private func add() {
         guard !bundleID.isEmpty, store.settings.perApp[bundleID] == nil else { return }
-        var config = ScrollConfig()
-        config.passthrough = true // 기본 용도: 해당 앱에서 스크롤 가공 끄기
-        store.settings.perApp[bundleID] = config
+        store.settings.perApp[bundleID] = store.settings.global
     }
 
-    private func passthroughBinding(_ id: String) -> Binding<Bool> {
+    private func configBinding(_ id: String) -> Binding<ScrollConfig> {
         Binding(
-            get: { store.settings.perApp[id]?.passthrough ?? false },
-            set: { newValue in
-                var config = store.settings.perApp[id] ?? ScrollConfig()
-                config.passthrough = newValue
-                store.settings.perApp[id] = config
-            }
+            get: { store.settings.perApp[id] ?? ScrollConfig() },
+            set: { store.settings.perApp[id] = $0 }
         )
+    }
+
+    /// 헤더에 한 줄 상태 요약.
+    private func summary(_ c: ScrollConfig) -> String {
+        if c.passthrough { return "통과" }
+        var parts: [String] = []
+        if c.invertVertical || c.invertHorizontal { parts.append("반전") }
+        if c.speedMultiplier != 1.0 { parts.append(String(format: "속도 %.2g×", c.speedMultiplier)) }
+        if c.linearScroll { parts.append("가속제거") }
+        if c.smoothEnabled { parts.append("부드러움") }
+        return parts.isEmpty ? "전역과 동일" : parts.joined(separator: "·")
     }
 
     private var runningApps: [(id: String, name: String)] {
