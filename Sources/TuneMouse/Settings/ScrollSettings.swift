@@ -5,6 +5,29 @@ struct ScrollConfig: Codable, Equatable {
     var invertVertical = false
     var invertHorizontal = false
     var speedMultiplier = 1.0
+
+    // 부드러운 스크롤 (Phase 4)
+    var smoothEnabled = false
+    var smoothStep = 60.0       // 노치당 픽셀 거리
+    var smoothness = 0.5        // 0..1, 높을수록 부드럽고 길게
+
+    enum CodingKeys: String, CodingKey {
+        case invertVertical, invertHorizontal, speedMultiplier
+        case smoothEnabled, smoothStep, smoothness
+    }
+
+    init() {}
+
+    // 구버전 저장본(부드러움 키 없음) 호환: 누락 키는 기본값.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        invertVertical = try c.decodeIfPresent(Bool.self, forKey: .invertVertical) ?? false
+        invertHorizontal = try c.decodeIfPresent(Bool.self, forKey: .invertHorizontal) ?? false
+        speedMultiplier = try c.decodeIfPresent(Double.self, forKey: .speedMultiplier) ?? 1.0
+        smoothEnabled = try c.decodeIfPresent(Bool.self, forKey: .smoothEnabled) ?? false
+        smoothStep = try c.decodeIfPresent(Double.self, forKey: .smoothStep) ?? 60.0
+        smoothness = try c.decodeIfPresent(Double.self, forKey: .smoothness) ?? 0.5
+    }
 }
 
 /// 글로벌 기본 + 앱별 오버라이드 구조(SPEC의 데이터 모델 원칙).

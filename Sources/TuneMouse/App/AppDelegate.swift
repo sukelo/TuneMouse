@@ -14,9 +14,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let buttonRemap = ButtonRemapTransformer()
     private let scrollDirection = ScrollDirectionTransformer()
     private let scrollSpeed = ScrollSpeedTransformer()
+    private let smoothAnimator = SmoothScrollAnimator()
+    private lazy var smoothScroll = SmoothScrollTransformer(animator: smoothAnimator)
     private lazy var tapController: EventTapController = {
         let debug = UserDefaults.standard.bool(forKey: "debugEventLogging")
-        var transformers: [EventTransformer] = [buttonRemap, scrollDirection, scrollSpeed]
+        var transformers: [EventTransformer] = [buttonRemap, scrollDirection, scrollSpeed, smoothScroll]
         if debug { transformers.append(DebugLoggingTransformer()) } // 맨 뒤 → 변환 후 최종값 로그
         Log.tap.notice("파이프라인 변환기 \(transformers.count)개 (debug=\(debug, privacy: .public))")
         let pipeline = EventPipeline(transformers: transformers, contextProvider: contextProvider)
@@ -80,6 +82,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         scrollDirection.invertVertical = g.invertVertical
         scrollDirection.invertHorizontal = g.invertHorizontal
         scrollSpeed.multiplier = g.speedMultiplier
+        smoothScroll.settings = settings // 부드러움은 앱별 해석 위해 전체 전달
     }
 
     /// 주기적 건강 점검. refreshAccessibility가 권한 변화를 @Published로 알리면

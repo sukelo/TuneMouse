@@ -64,6 +64,25 @@ struct SettingsView: View {
                     .frame(width: 52, alignment: .trailing)
             }
 
+            Toggle("부드러운 스크롤", isOn: $scrollSettings.settings.global.smoothEnabled)
+
+            if scrollSettings.settings.global.smoothEnabled {
+                HStack {
+                    Text("스텝")
+                    Slider(value: $scrollSettings.settings.global.smoothStep, in: 20...200)
+                    Text("\(Int(scrollSettings.settings.global.smoothStep))px")
+                        .monospacedDigit()
+                        .frame(width: 52, alignment: .trailing)
+                }
+                HStack {
+                    Text("부드러움")
+                    Slider(value: $scrollSettings.settings.global.smoothness, in: 0...1)
+                    Text(String(format: "%.0f%%", scrollSettings.settings.global.smoothness * 100))
+                        .monospacedDigit()
+                        .frame(width: 52, alignment: .trailing)
+                }
+            }
+
             Button("기본값으로") {
                 scrollSettings.settings.global = ScrollConfig()
             }
