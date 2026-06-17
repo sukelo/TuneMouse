@@ -35,8 +35,12 @@ final class ScrollAccelTransformer: EventTransformer {
         let lineValue = event.getIntegerValueField(line)
         guard lineValue != 0 else { return }
 
-        // 노치 카운트 × 고정 거리 → 가속 곡선 제거. 부호는 라인 delta가 보존.
-        let pixels = Double(lineValue) * pixelsPerNotch
+        // macOS는 라인 delta에도 가속을 건다(빨리 굴리면 한 노치가 2~3라인으로 부풀려짐).
+        // 균일 스크롤은 속도 무관 고정 거리가 목적 → 이벤트 1개를 1노치로 정규화해 가속을 무력화.
+        // (라인 delta도 ±1로 덮어써, 라인 delta를 읽는 앱·하류 부드러운 스크롤도 균일해짐.)
+        let notch: Int64 = lineValue > 0 ? 1 : -1
+        let pixels = Double(notch) * pixelsPerNotch
+        event.setIntegerValueField(line, value: notch)
         event.setIntegerValueField(point, value: Int64(pixels.rounded()))
         event.setDoubleValueField(fixed, value: pixels)
     }
