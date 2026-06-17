@@ -3,6 +3,7 @@ import SwiftUI
 struct SettingsView: View {
     @ObservedObject var appState: AppState
     @ObservedObject var scrollSettings: ScrollSettingsStore
+    @ObservedObject var buttonMappings: ButtonMappingStore
 
     // 창이 떠 있는 동안 권한 상태를 주기적으로 갱신 (시스템 설정에서 허용하면 즉시 반영)
     private let permissionTimer = Timer.publish(every: 1.5, on: .main, in: .common).autoconnect()
@@ -27,12 +28,16 @@ struct SettingsView: View {
 
                 Divider()
 
+                ButtonMappingSection(store: buttonMappings)
+
+                Divider()
+
                 permissionSection
             }
             .padding(20)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .frame(width: 440, height: 460)
+        .frame(width: 460, height: 560)
         .onAppear {
             appState.refreshAccessibility()
             appState.refreshLaunchAtLogin()

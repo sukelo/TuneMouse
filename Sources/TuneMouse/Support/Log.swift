@@ -10,4 +10,5 @@ enum Log {
     static let menu = Logger(subsystem: subsystem, category: "menu")
     static let tap = Logger(subsystem: subsystem, category: "tap")
     static let hotkey = Logger(subsystem: subsystem, category: "hotkey")
+    static let action = Logger(subsystem: subsystem, category: "action")
 }

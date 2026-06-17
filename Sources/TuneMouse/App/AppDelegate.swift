@@ -5,16 +5,18 @@ import Combine
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let appState = AppState()
     private let scrollSettings = ScrollSettingsStore()
+    private let buttonMappings = ButtonMappingStore()
     private var statusController: StatusItemController?
     private var settingsWindow: SettingsWindowController?
 
     // 파이프라인 구성요소
     private let contextProvider = AppContextProvider()
+    private let buttonRemap = ButtonRemapTransformer()
     private let scrollDirection = ScrollDirectionTransformer()
     private let scrollSpeed = ScrollSpeedTransformer()
     private lazy var tapController: EventTapController = {
         let debug = UserDefaults.standard.bool(forKey: "debugEventLogging")
-        var transformers: [EventTransformer] = [scrollDirection, scrollSpeed]
+        var transformers: [EventTransformer] = [buttonRemap, scrollDirection, scrollSpeed]
         if debug { transformers.append(DebugLoggingTransformer()) } // 맨 뒤 → 변환 후 최종값 로그
         Log.tap.notice("파이프라인 변환기 \(transformers.count)개 (debug=\(debug, privacy: .public))")
         let pipeline = EventPipeline(transformers: transformers, contextProvider: contextProvider)
@@ -66,6 +68,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         scrollSettings.$settings
             .sink { [weak self] settings in self?.applyScrollSettings(settings) }
             .store(in: &cancellables)
+
+        // 버튼 매핑 → 변환기 라이브 반영
+        buttonMappings.$mappings
+            .sink { [weak self] mappings in self?.buttonRemap.mappings = mappings }
+            .store(in: &cancellables)
     }
 
     private func applyScrollSettings(_ settings: ScrollSettings) {
@@ -91,7 +98,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func openSettings() {
         if settingsWindow == nil {
-            settingsWindow = SettingsWindowController(appState: appState, scrollSettings: scrollSettings)
+            settingsWindow = SettingsWindowController(
+                appState: appState,
+                scrollSettings: scrollSettings,
+                buttonMappings: buttonMappings
+            )
         }
         settingsWindow?.show()
     }

@@ -7,15 +7,21 @@ final class SettingsWindowController {
     private var window: NSWindow?
     private let appState: AppState
     private let scrollSettings: ScrollSettingsStore
+    private let buttonMappings: ButtonMappingStore
 
-    init(appState: AppState, scrollSettings: ScrollSettingsStore) {
+    init(appState: AppState, scrollSettings: ScrollSettingsStore, buttonMappings: ButtonMappingStore) {
         self.appState = appState
         self.scrollSettings = scrollSettings
+        self.buttonMappings = buttonMappings
     }
 
     func show() {
         if window == nil {
-            let hosting = NSHostingController(rootView: SettingsView(appState: appState, scrollSettings: scrollSettings))
+            let hosting = NSHostingController(rootView: SettingsView(
+                appState: appState,
+                scrollSettings: scrollSettings,
+                buttonMappings: buttonMappings
+            ))
             let win = NSWindow(contentViewController: hosting)
             win.title = "TuneMouse 설정"
             win.styleMask = [.titled, .closable, .miniaturizable]
