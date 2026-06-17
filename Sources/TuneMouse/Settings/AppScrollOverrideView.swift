@@ -6,6 +6,7 @@ import AppKit
 /// 오버라이드는 글로벌을 **대체**(병합 아님)하므로, 추가 시 **현재 전역값을 복사**해 시작한다.
 struct AppScrollOverrideSection: View {
     @ObservedObject var store: ScrollSettingsStore
+    @StateObject private var apps = RunningAppsModel()
 
     @State private var bundleID = ""
 
@@ -20,7 +21,7 @@ struct AppScrollOverrideSection: View {
                             .padding(.top, 4)
                     } label: {
                         HStack {
-                            Text(appName(id)).font(.callout)
+                            apps.info(for: id).label.font(.callout)
                             Spacer()
                             Text(summary(config))
                                 .font(.caption).foregroundStyle(.secondary)
@@ -36,13 +37,16 @@ struct AppScrollOverrideSection: View {
 
             HStack {
                 Picker("앱", selection: $bundleID) {
-                    ForEach(runningApps) { app in app.pickerLabel.tag(app.id) }
+                    ForEach(apps.apps) { app in app.label.tag(app.id) }
                 }
+                Button { apps.refresh() } label: { Image(systemName: "arrow.clockwise") }
+                    .buttonStyle(.borderless)
+                    .help("실행 중인 앱 목록 새로고침")
                 Button("설정 추가") { add() }
                     .disabled(bundleID.isEmpty || store.settings.perApp[bundleID] != nil)
             }
         }
-        .onAppear { if bundleID.isEmpty { bundleID = runningApps.first?.id ?? "" } }
+        .onAppear { if bundleID.isEmpty { bundleID = apps.apps.first?.id ?? "" } }
     }
 
     /// 새 오버라이드는 현재 전역값을 복사해 시작(교체 모델 → "전역과 같게 두고 다른 것만 수정").
@@ -69,8 +73,4 @@ struct AppScrollOverrideSection: View {
         if c.smoothEnabled { parts.append("부드럽게") }
         return parts.isEmpty ? "기본과 동일" : parts.joined(separator: "·")
     }
-
-    private var runningApps: [RunningApp] { RunningApps.list() }
-
-    private func appName(_ id: String) -> String { RunningApps.name(for: id) }
 }

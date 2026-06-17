@@ -98,6 +98,7 @@ enum MouseButtonNames {
 /// 홀드/더블/드래그 트리거는 후속.
 struct ButtonMappingSection: View {
     @ObservedObject var store: ButtonMappingStore
+    @StateObject private var apps = RunningAppsModel()
 
     @State private var scopeIsGlobal = true
     @State private var bundleID = ""
@@ -114,7 +115,7 @@ struct ButtonMappingSection: View {
 
             addForm
         }
-        .onAppear { if bundleID.isEmpty { bundleID = runningApps.first?.id ?? "" } }
+        .onAppear { if bundleID.isEmpty { bundleID = apps.apps.first?.id ?? "" } }
     }
 
     // MARK: 목록
@@ -130,7 +131,7 @@ struct ButtonMappingSection: View {
             }
             ForEach(store.mappings.perApp.sorted { $0.key < $1.key }, id: \.key) { bundleID, list in
                 ForEach(list) { mapping in
-                    row(scope: appName(bundleID), mapping: mapping) { delete(mapping, bundleID: bundleID) }
+                    row(scope: apps.info(for: bundleID).name, mapping: mapping) { delete(mapping, bundleID: bundleID) }
                 }
             }
         }
@@ -158,8 +159,13 @@ struct ButtonMappingSection: View {
             .pickerStyle(.segmented)
 
             if !scopeIsGlobal {
-                Picker("앱", selection: $bundleID) {
-                    ForEach(runningApps) { app in app.pickerLabel.tag(app.id) }
+                HStack {
+                    Picker("앱", selection: $bundleID) {
+                        ForEach(apps.apps) { app in app.label.tag(app.id) }
+                    }
+                    Button { apps.refresh() } label: { Image(systemName: "arrow.clockwise") }
+                        .buttonStyle(.borderless)
+                        .help("실행 중인 앱 목록 새로고침")
                 }
             }
 
@@ -247,10 +253,6 @@ struct ButtonMappingSection: View {
     }
 
     // MARK: 헬퍼
-
-    private var runningApps: [RunningApp] { RunningApps.list() }
-
-    private func appName(_ id: String) -> String { RunningApps.name(for: id) }
 
     private func actionLabel(_ action: ActionType) -> String {
         if case .keystroke(let combo) = action,
