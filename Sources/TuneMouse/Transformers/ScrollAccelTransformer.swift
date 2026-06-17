@@ -1,14 +1,20 @@
 import CoreGraphics
 
-/// 스크롤 가속 제거(선형화). macOS는 휠이 들어오는 속도에 따라 픽셀 delta를 지수적으로 키운다.
-/// linearScroll이 켜지면 OS의 가속된 픽셀 delta를 버리고, 라인 delta(노치 카운트)에
-/// 고정 거리(pixelsPerNotch)를 곱해 덮어쓴다 → 굴리는 속도와 무관하게 노치당 거리 일정(윈도우 느낌).
+/// 스크롤 가속 제거(균일 스크롤). macOS는 휠 입력 속도에 가속을 걸어 노치당 거리가 들쭉날쭉하다.
+/// 균일 모드는 **노치당 정확한 픽셀 거리**가 목적.
 ///
-/// 체인 순서: 방향 반전 → (여기) 선형화 → 속도 배율 → 부드러움.
-/// 부드러운 스크롤이 켜져 있으면, 여기서 라인 delta를 ±1로 정규화한 값을 그쪽이 읽으므로
-/// 부드러운 스크롤도 노치당 균일해진다(픽셀 덮어쓰기는 부드러움이 버리지만 라인 정규화는 유효).
+/// 핵심: 비연속(휠) 이벤트는 앱이 **라인 delta**를 honor하고 픽셀 delta는 무시하는 경우가 많다.
+/// 그래서 픽셀 필드만 덮어쓰면 "한칸당 이동거리"가 안 먹고, 속도(라인 배율)와도 합쳐지지 않는다
+/// (둘 중 하나만 적용되는 증상). 이를 없애기 위해 균일 모드는 **연속(정밀) 픽셀 이벤트로 합성**한다
+/// — 부드러운 스크롤과 같은 방식이라 모든 앱에서 거리가 일관된다. 속도(speedMultiplier)도 여기서 함께 반영.
+///
+/// 체인 순서: 방향 반전 → (여기) 균일화 → 속도 → 부드러움.
+/// - 부드러운 스크롤 ON: 그쪽이 연속 픽셀로 합성하므로, 여기선 **라인만 ±1 정규화**하고 통과(속도는 하류에서 라인 배율로 반영).
+/// - 부드러운 스크롤 OFF: 여기서 **연속 픽셀 이벤트를 즉시 합성**하고 원본을 소비(속도까지 반영).
 final class ScrollAccelTransformer: EventTransformer {
     var settings = ScrollSettings()
+
+    private let source = CGEventSource(stateID: .combinedSessionState)
 
     var isEnabled: Bool {
         settings.global.linearScroll
@@ -19,30 +25,56 @@ final class ScrollAccelTransformer: EventTransformer {
         guard type == .scrollWheel else { return .passUnchanged }
         let config = settings.resolved(forBundleID: context.frontmostBundleID)
         guard !config.passthrough, config.linearScroll else { return .passUnchanged }
-        linearize(event, axis: .vertical, pixelsPerNotch: config.pixelsPerNotch)
-        linearize(event, axis: .horizontal, pixelsPerNotch: config.pixelsPerNotch)
-        return .passUnchanged
+
+        if config.smoothEnabled {
+            // 부드러운 스크롤이 라인 delta를 보고 합성 → 여기선 ±1 정규화만(노치당 균일 보장).
+            normalizeLine(event, axis: .vertical)
+            normalizeLine(event, axis: .horizontal)
+            return .passUnchanged
+        }
+
+        // 정밀 픽셀 이벤트로 합성: 노치당 (pixelsPerNotch × 속도) px. 모든 앱에서 일관.
+        let pixelV = pixels(event, axis: .vertical, config: config)
+        let pixelH = pixels(event, axis: .horizontal, config: config)
+        guard pixelV != 0 || pixelH != 0 else { return .passUnchanged }
+        postContinuous(pixelV: pixelV, pixelH: pixelH)
+        return .discard
     }
 
     private enum Axis { case vertical, horizontal }
 
-    private func linearize(_ event: CGEvent, axis: Axis, pixelsPerNotch: Double) {
-        let line: CGEventField = axis == .vertical ? .scrollWheelEventDeltaAxis1 : .scrollWheelEventDeltaAxis2
-        let point: CGEventField = axis == .vertical ? .scrollWheelEventPointDeltaAxis1 : .scrollWheelEventPointDeltaAxis2
-        let fixed: CGEventField = axis == .vertical ? .scrollWheelEventFixedPtDeltaAxis1 : .scrollWheelEventFixedPtDeltaAxis2
+    private func lineField(_ axis: Axis) -> CGEventField {
+        axis == .vertical ? .scrollWheelEventDeltaAxis1 : .scrollWheelEventDeltaAxis2
+    }
 
-        // 라인 delta(노치 카운트)가 있을 때만 동작 = discrete 휠 입력.
-        // 픽셀 delta만 있는 연속/모멘텀 스트림은 건드리지 않는다.
-        let lineValue = event.getIntegerValueField(line)
-        guard lineValue != 0 else { return }
+    /// 라인 delta를 노치당 ±1로 정규화(가속된 라인 카운트 무력화). 부드러운 스크롤 경로용.
+    private func normalizeLine(_ event: CGEvent, axis: Axis) {
+        let field = lineField(axis)
+        let value = event.getIntegerValueField(field)
+        guard value != 0 else { return }
+        event.setIntegerValueField(field, value: value > 0 ? 1 : -1)
+    }
 
-        // macOS는 라인 delta에도 가속을 건다(빨리 굴리면 한 노치가 2~3라인으로 부풀려짐).
-        // 균일 스크롤은 속도 무관 고정 거리가 목적 → 이벤트 1개를 1노치로 정규화해 가속을 무력화.
-        // (라인 delta도 ±1로 덮어써, 라인 delta를 읽는 앱·하류 부드러운 스크롤도 균일해짐.)
-        let notch: Int64 = lineValue > 0 ? 1 : -1
-        let pixels = Double(notch) * pixelsPerNotch
-        event.setIntegerValueField(line, value: notch)
-        event.setIntegerValueField(point, value: Int64(pixels.rounded()))
-        event.setDoubleValueField(fixed, value: pixels)
+    /// 이 축의 합성 픽셀 거리 = 노치 부호 × pixelsPerNotch × 속도. 라인 delta가 0이면 0.
+    private func pixels(_ event: CGEvent, axis: Axis, config: ScrollConfig) -> Int32 {
+        let value = event.getIntegerValueField(lineField(axis))
+        guard value != 0 else { return 0 }
+        let notch = value > 0 ? 1.0 : -1.0
+        let px = notch * config.pixelsPerNotch * config.speedMultiplier
+        return Int32(px.rounded())
+    }
+
+    /// 연속(정밀) 픽셀 스크롤 이벤트 합성·post. IsContinuous=1 → 탭에서 우회(재처리 없음).
+    private func postContinuous(pixelV: Int32, pixelH: Int32) {
+        guard let event = CGEvent(
+            scrollWheelEvent2Source: source,
+            units: .pixel,
+            wheelCount: 2,
+            wheel1: pixelV,
+            wheel2: pixelH,
+            wheel3: 0
+        ) else { return }
+        event.setIntegerValueField(.scrollWheelEventIsContinuous, value: 1)
+        event.post(tap: .cgSessionEventTap)
     }
 }

@@ -22,8 +22,10 @@ final class DebugLoggingTransformer: EventTransformer {
         case .scrollWheel:
             let dy = event.getIntegerValueField(.scrollWheelEventDeltaAxis1)
             let dx = event.getIntegerValueField(.scrollWheelEventDeltaAxis2)
+            let py = event.getIntegerValueField(.scrollWheelEventPointDeltaAxis1)
+            let fy = event.getDoubleValueField(.scrollWheelEventFixedPtDeltaAxis1)
             let continuous = event.getIntegerValueField(.scrollWheelEventIsContinuous)
-            Log.tap.debug("scroll dy=\(dy) dx=\(dx) continuous=\(continuous) app=\(context.frontmostBundleID ?? "?", privacy: .public)")
+            Log.tap.debug("scroll line(dy=\(dy) dx=\(dx)) pointY=\(py) fixedY=\(fy, format: .fixed(precision: 2)) cont=\(continuous) app=\(context.frontmostBundleID ?? "?", privacy: .public)")
         case .otherMouseDown, .leftMouseDown, .rightMouseDown:
             let button = event.getIntegerValueField(.mouseEventButtonNumber)
             Log.tap.debug("buttonDown #\(button) (type=\(type.rawValue))")
