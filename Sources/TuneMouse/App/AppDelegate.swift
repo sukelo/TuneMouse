@@ -13,12 +13,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let contextProvider = AppContextProvider()
     private let buttonRemap = ButtonRemapTransformer()
     private let scrollDirection = ScrollDirectionTransformer()
+    private let scrollAccel = ScrollAccelTransformer()
     private let scrollSpeed = ScrollSpeedTransformer()
     private let smoothAnimator = SmoothScrollAnimator()
     private lazy var smoothScroll = SmoothScrollTransformer(animator: smoothAnimator)
     private lazy var tapController: EventTapController = {
         let debug = UserDefaults.standard.bool(forKey: "debugEventLogging")
-        var transformers: [EventTransformer] = [buttonRemap, scrollDirection, scrollSpeed, smoothScroll]
+        var transformers: [EventTransformer] = [buttonRemap, scrollDirection, scrollAccel, scrollSpeed, smoothScroll]
         if debug { transformers.append(DebugLoggingTransformer()) } // 맨 뒤 → 변환 후 최종값 로그
         Log.tap.notice("파이프라인 변환기 \(transformers.count)개 (debug=\(debug, privacy: .public))")
         let pipeline = EventPipeline(transformers: transformers, contextProvider: contextProvider)
@@ -80,6 +81,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func applyScrollSettings(_ settings: ScrollSettings) {
         // 모든 스크롤 변환기가 앱별 해석을 하도록 전체 설정 전달
         scrollDirection.settings = settings
+        scrollAccel.settings = settings
         scrollSpeed.settings = settings
         smoothScroll.settings = settings
     }

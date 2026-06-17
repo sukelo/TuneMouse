@@ -6,6 +6,10 @@ struct ScrollConfig: Codable, Equatable {
     var invertHorizontal = false
     var speedMultiplier = 1.0
 
+    // 가속 제거 (선형 스크롤) — true면 OS 휠 가속 곡선을 버리고 노치당 고정 거리로 덮어쓴다.
+    var linearScroll = false
+    var pixelsPerNotch = 40.0   // 노치당 픽셀(linearScroll일 때만 사용)
+
     // 부드러운 스크롤 (Phase 4)
     var smoothEnabled = false
     var smoothStep = 60.0       // 노치당 픽셀 거리
@@ -16,6 +20,7 @@ struct ScrollConfig: Codable, Equatable {
 
     enum CodingKeys: String, CodingKey {
         case invertVertical, invertHorizontal, speedMultiplier
+        case linearScroll, pixelsPerNotch
         case smoothEnabled, smoothStep, smoothness, passthrough
     }
 
@@ -27,6 +32,8 @@ struct ScrollConfig: Codable, Equatable {
         invertVertical = try c.decodeIfPresent(Bool.self, forKey: .invertVertical) ?? false
         invertHorizontal = try c.decodeIfPresent(Bool.self, forKey: .invertHorizontal) ?? false
         speedMultiplier = try c.decodeIfPresent(Double.self, forKey: .speedMultiplier) ?? 1.0
+        linearScroll = try c.decodeIfPresent(Bool.self, forKey: .linearScroll) ?? false
+        pixelsPerNotch = try c.decodeIfPresent(Double.self, forKey: .pixelsPerNotch) ?? 40.0
         smoothEnabled = try c.decodeIfPresent(Bool.self, forKey: .smoothEnabled) ?? false
         smoothStep = try c.decodeIfPresent(Double.self, forKey: .smoothStep) ?? 60.0
         smoothness = try c.decodeIfPresent(Double.self, forKey: .smoothness) ?? 0.5

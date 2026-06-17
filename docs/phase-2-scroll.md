@@ -121,5 +121,15 @@ Sources/TuneMouse/Settings/SettingsView.swift           # 스크롤 섹션 추�
 - **P2-7** 속도 슬라이더 1.0 디텐트 없음(사소).
 - 동시성: 변환기 상태는 메인 단일 접근으로 안전, 전용 스레드 이전 시 재검토(F6).
 
+## 후속 추가 — 스크롤 가속 제거(선형)
+
+macOS는 휠 입력 속도에 따라 픽셀 delta를 지수적으로 키우는 **가속 곡선**을 적용한다(빨리 굴릴수록 노치당 거리↑). 윈도우식 **노치당 고정 거리(리니어)** 가 필요해 별도 모드로 추가.
+
+- **데이터**: `ScrollConfig.linearScroll`(Bool) + `pixelsPerNotch`(Double, 기본 40). Codable 마이그레이션(decodeIfPresent)으로 구버전 저장본 호환.
+- **변환기**: `ScrollAccelTransformer`. 라인 delta(노치 카운트)가 있을 때만 동작 → 픽셀 delta(`PointDelta`/`FixedPtDelta`)를 OS 가속값 버리고 `라인 delta × pixelsPerNotch`로 덮어씀. 라인 delta 자체는 보존(부호·노치수 그대로).
+- **체인 순서**: 방향 → **선형화** → 속도 배율 → 부드러움. 부드러운 스크롤이 켜지면 그쪽이 라인 delta만 보고 픽셀을 재구성하므로 선형화는 자연히 무시됨(충돌 없음).
+- **앱별**: `resolved(forBundleID:)`로 글로벌/앱별 모두 적용 가능(엔진 지원). 앱별 개별값 편집 UI는 후속 — 현재 글로벌 UI만 노출.
+- **연속/모멘텀**: 라인 delta가 없는 스트림은 미변형(트랙패드는 이미 탭 진입 전 필터).
+
 ## 금지 구역 메모
 - 배포/공증 스크립트는 손대지 않음. `build.sh`/`run.sh`만 로컬 도구로 갱신 가능.

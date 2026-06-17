@@ -68,6 +68,18 @@ struct SettingsView: View {
                     .frame(width: 52, alignment: .trailing)
             }
 
+            Toggle("스크롤 가속 제거 (선형)", isOn: $scrollSettings.settings.global.linearScroll)
+
+            if scrollSettings.settings.global.linearScroll {
+                HStack {
+                    Text("노치당 거리")
+                    Slider(value: $scrollSettings.settings.global.pixelsPerNotch, in: 10...120)
+                    Text("\(Int(scrollSettings.settings.global.pixelsPerNotch))px")
+                        .monospacedDigit()
+                        .frame(width: 52, alignment: .trailing)
+                }
+            }
+
             Toggle("부드러운 스크롤", isOn: $scrollSettings.settings.global.smoothEnabled)
 
             if scrollSettings.settings.global.smoothEnabled {
