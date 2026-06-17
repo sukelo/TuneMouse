@@ -36,7 +36,7 @@ struct AppScrollOverrideSection: View {
 
             HStack {
                 Picker("앱", selection: $bundleID) {
-                    ForEach(runningApps, id: \.id) { app in Text(app.name).tag(app.id) }
+                    ForEach(runningApps) { app in app.pickerLabel.tag(app.id) }
                 }
                 Button("설정 추가") { add() }
                     .disabled(bundleID.isEmpty || store.settings.perApp[bundleID] != nil)
@@ -70,17 +70,7 @@ struct AppScrollOverrideSection: View {
         return parts.isEmpty ? "기본과 동일" : parts.joined(separator: "·")
     }
 
-    private var runningApps: [(id: String, name: String)] {
-        NSWorkspace.shared.runningApplications
-            .filter { $0.activationPolicy == .regular }
-            .compactMap { app -> (id: String, name: String)? in
-                guard let id = app.bundleIdentifier, id != "com.tunemouse.TuneMouse" else { return nil }
-                return (id, app.localizedName ?? id)
-            }
-            .sorted { $0.name < $1.name }
-    }
+    private var runningApps: [RunningApp] { RunningApps.list() }
 
-    private func appName(_ id: String) -> String {
-        runningApps.first { $0.id == id }?.name ?? id
-    }
+    private func appName(_ id: String) -> String { RunningApps.name(for: id) }
 }
