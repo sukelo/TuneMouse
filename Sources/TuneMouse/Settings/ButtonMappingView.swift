@@ -102,8 +102,6 @@ struct ButtonMappingSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("버튼 매핑").font(.headline)
-
             mappingList
 
             Divider().opacity(0.3)

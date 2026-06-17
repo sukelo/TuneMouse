@@ -9,42 +9,22 @@ struct SettingsView: View {
     private let permissionTimer = Timer.publish(every: 1.5, on: .main, in: .common).autoconnect()
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                Text("TuneMouse")
-                    .font(.title2).bold()
-
-                // 권한 미허용이면 가장 먼저 눈에 띄게 — 없으면 아무것도 안 동작하므로 최상단.
+        VStack(spacing: 0) {
+            // 권한 미허용이면 모든 탭 위에 항상 보이게 — 없으면 아무것도 동작하지 않으므로.
+            if !appState.hasAccessibility {
                 permissionBanner
-
-                masterSwitch
-
-                Divider()
-
-                // 마스터 스위치가 꺼져 있으면 아래 설정은 적용되지 않음을 시각적으로 표시.
-                Group {
-                    if !appState.isEnabled {
-                        Label("꺼져 있어요 — 위 스위치를 켜면 아래 설정이 적용됩니다",
-                              systemImage: "moon.zzz")
-                            .font(.caption).foregroundStyle(.secondary)
-                    }
-
-                    scrollSection
-
-                    Divider()
-
-                    AppScrollOverrideSection(store: scrollSettings)
-
-                    Divider()
-
-                    ButtonMappingSection(store: buttonMappings)
-                }
-                .opacity(appState.isEnabled ? 1 : 0.5)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 14)
             }
-            .padding(20)
-            .frame(maxWidth: .infinity, alignment: .leading)
+
+            TabView {
+                generalTab.tabItem { Label("일반", systemImage: "gearshape") }
+                scrollTab.tabItem { Label("스크롤", systemImage: "computermouse") }
+                buttonsTab.tabItem { Label("버튼", systemImage: "cursorarrow.click") }
+            }
+            .padding(.top, 10)
         }
-        .frame(width: 460, height: 560)
+        .frame(width: 500, height: 600)
         .onAppear {
             appState.refreshAccessibility()
             appState.refreshLaunchAtLogin()
@@ -54,75 +34,115 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: 마스터 스위치 (전체 기능 on/off)
+    // MARK: 탭 공통 스크롤 컨테이너
 
-    @ViewBuilder
-    private var masterSwitch: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Toggle(isOn: $appState.isEnabled) {
-                Text("TuneMouse 켜기").font(.headline)
-                Text("전체 기능 켜기/끄기 · 패닉키 ⌃⌥⌘M")
-                    .font(.caption).foregroundStyle(.secondary)
-            }
-            Toggle("로그인 시 자동 시작", isOn: Binding(
-                get: { appState.launchAtLogin },
-                set: { appState.setLaunchAtLogin($0) }
-            ))
-            .font(.callout)
-        }
-        .padding(12)
-        .background(Color(nsColor: .controlBackgroundColor))
-        .clipShape(RoundedRectangle(cornerRadius: 8))
-    }
-
-    // MARK: 스크롤 (전역 기본)
-
-    @ViewBuilder
-    private var scrollSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("스크롤").font(.headline)
-                Text("모든 앱에 적용되는 기본 설정")
-                    .font(.caption).foregroundStyle(.secondary)
-            }
-
-            ScrollConfigEditor(config: $scrollSettings.settings.global)
-
-            Button("기본값으로") {
-                scrollSettings.settings.global = ScrollConfig()
-            }
-            .font(.caption)
+    private func tabBody<C: View>(@ViewBuilder _ content: () -> C) -> some View {
+        ScrollView {
+            VStack(spacing: 14) { content() }
+                .padding(16)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
-    // MARK: 접근성 권한 배너
+    /// 마스터 스위치가 꺼져 있을 때 탭 상단에 보여줄 안내.
+    @ViewBuilder
+    private var offHint: some View {
+        if !appState.isEnabled {
+            Label("TuneMouse가 꺼져 있어 지금은 적용되지 않아요", systemImage: "moon.zzz")
+                .font(.caption).foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    // MARK: 일반 탭
+
+    private var generalTab: some View {
+        tabBody {
+            SettingsCard("전원", systemImage: "power") {
+                Toggle(isOn: $appState.isEnabled) {
+                    Text("TuneMouse 켜기")
+                    Text("전체 기능 켜기/끄기 · 패닉키 ⌃⌥⌘M")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                Divider()
+                Toggle("로그인 시 자동 시작", isOn: Binding(
+                    get: { appState.launchAtLogin },
+                    set: { appState.setLaunchAtLogin($0) }
+                ))
+            }
+
+            SettingsCard("접근성 권한", systemImage: "lock.shield") {
+                if appState.hasAccessibility {
+                    Label("허용됨", systemImage: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                } else {
+                    Text("마우스 휠·버튼을 가공하려면 접근성 권한이 필요합니다.")
+                        .font(.callout).foregroundStyle(.secondary)
+                    Button("시스템 설정 열기") {
+                        AccessibilityPermission.promptIfNeeded()
+                        AccessibilityPermission.openSystemSettings()
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: 스크롤 탭
+
+    private var scrollTab: some View {
+        tabBody {
+            offHint
+            Group {
+                SettingsCard("스크롤", systemImage: "computermouse",
+                             subtitle: "모든 앱에 적용되는 기본") {
+                    ScrollConfigEditor(config: $scrollSettings.settings.global)
+                    Divider()
+                    Button("기본값으로") { scrollSettings.settings.global = ScrollConfig() }
+                        .font(.caption)
+                }
+
+                SettingsCard("앱별 스크롤", systemImage: "macwindow.on.rectangle",
+                             subtitle: "특정 앱만 다르게 (없으면 기본 사용)") {
+                    AppScrollOverrideSection(store: scrollSettings)
+                }
+            }
+            .opacity(appState.isEnabled ? 1 : 0.55)
+        }
+    }
+
+    // MARK: 버튼 탭
+
+    private var buttonsTab: some View {
+        tabBody {
+            offHint
+            SettingsCard("버튼 매핑", systemImage: "cursorarrow.click",
+                         subtitle: "옆 버튼·휠 클릭에 동작 연결") {
+                ButtonMappingSection(store: buttonMappings)
+            }
+            .opacity(appState.isEnabled ? 1 : 0.55)
+        }
+    }
+
+    // MARK: 접근성 권한 배너 (미허용 시 전 탭 상단)
 
     @ViewBuilder
     private var permissionBanner: some View {
-        if !appState.hasAccessibility {
-            HStack(alignment: .top, spacing: 10) {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.orange)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("접근성 권한이 필요합니다").font(.callout).bold()
-                    Text("허용해야 마우스 가공이 동작해요")
-                        .font(.caption).foregroundStyle(.secondary)
-                }
-                Spacer()
-                Button("시스템 설정 열기") {
-                    AccessibilityPermission.promptIfNeeded()
-                    AccessibilityPermission.openSystemSettings()
-                }
-                .controlSize(.small)
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(.orange)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("접근성 권한이 필요합니다").font(.callout).bold()
+                Text("허용해야 마우스 가공이 동작해요")
+                    .font(.caption).foregroundStyle(.secondary)
             }
-            .padding(12)
-            .background(Color.orange.opacity(0.12))
-            .clipShape(RoundedRectangle(cornerRadius: 8))
-        } else {
-            HStack(spacing: 6) {
-                Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
-                Text("접근성 권한 허용됨").font(.caption).foregroundStyle(.secondary)
+            Spacer()
+            Button("시스템 설정 열기") {
+                AccessibilityPermission.promptIfNeeded()
+                AccessibilityPermission.openSystemSettings()
             }
+            .controlSize(.small)
         }
+        .padding(12)
+        .background(Color.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
     }
 }

@@ -11,12 +11,6 @@ struct AppScrollOverrideSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("앱별 스크롤 설정").font(.headline)
-                Text("특정 앱만 다르게 (없으면 위 기본 설정 사용)")
-                    .font(.caption).foregroundStyle(.secondary)
-            }
-
             if store.settings.perApp.isEmpty {
                 Text("아래에서 앱을 골라 추가하세요").font(.caption).foregroundStyle(.secondary)
             } else {
