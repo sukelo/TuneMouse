@@ -19,7 +19,7 @@ final class ButtonRemapTransformer: EventTransformer {
         switch type {
         case .otherMouseDown, .leftMouseDown, .rightMouseDown:
             let button = event.getIntegerValueField(.mouseEventButtonNumber)
-            let active = mappings.resolved(forBundleID: context.frontmostBundleID)
+            let active = mappings.resolved(forBundleID: context.targetBundleID)
             let mods = event.flags.intersection(Self.modifierMask).rawValue
             if let mapping = active.first(where: { $0.trigger.button == button && $0.trigger.modifiers == mods }) {
                 fire(mapping.action)

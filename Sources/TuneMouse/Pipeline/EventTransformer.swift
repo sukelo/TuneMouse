@@ -1,9 +1,10 @@
 import CoreGraphics
 
 /// 변환기에 전달되는 컨텍스트(확장형). 앱별 오버라이드(축3)의 토대.
-/// Phase 2의 스크롤 변환기는 아직 사용하지 않음 — 시그니처 seam만 깔아둔다.
+/// `targetBundleID`는 이 이벤트의 오버라이드 대상 앱 — 스크롤은 **커서 아래 앱**,
+/// 버튼은 **포커스 앱**으로 파이프라인이 채운다(Phase 7).
 struct ProcessingContext {
-    let frontmostBundleID: String?
+    let targetBundleID: String?
 }
 
 /// 파이프라인에 끼우는 변환기. 각 변환기는 on/off + 파라미터를 가진다.
@@ -25,7 +26,7 @@ final class DebugLoggingTransformer: EventTransformer {
             let py = event.getIntegerValueField(.scrollWheelEventPointDeltaAxis1)
             let fy = event.getDoubleValueField(.scrollWheelEventFixedPtDeltaAxis1)
             let continuous = event.getIntegerValueField(.scrollWheelEventIsContinuous)
-            Log.tap.debug("scroll line(dy=\(dy) dx=\(dx)) pointY=\(py) fixedY=\(fy, format: .fixed(precision: 2)) cont=\(continuous) app=\(context.frontmostBundleID ?? "?", privacy: .public)")
+            Log.tap.debug("scroll line(dy=\(dy) dx=\(dx)) pointY=\(py) fixedY=\(fy, format: .fixed(precision: 2)) cont=\(continuous) app=\(context.targetBundleID ?? "?", privacy: .public)")
         case .otherMouseDown, .leftMouseDown, .rightMouseDown:
             let button = event.getIntegerValueField(.mouseEventButtonNumber)
             Log.tap.debug("buttonDown #\(button) (type=\(type.rawValue))")

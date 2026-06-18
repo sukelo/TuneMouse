@@ -12,7 +12,7 @@ final class ScrollDirectionTransformer: EventTransformer {
 
     func transform(event: CGEvent, type: CGEventType, context: ProcessingContext) -> ProcessResult {
         guard type == .scrollWheel else { return .passUnchanged }
-        let config = settings.resolved(forBundleID: context.frontmostBundleID)
+        let config = settings.resolved(forBundleID: context.targetBundleID)
         guard !config.passthrough else { return .passUnchanged }
         if config.invertVertical { negate(event, axis: .vertical) }
         if config.invertHorizontal { negate(event, axis: .horizontal) }

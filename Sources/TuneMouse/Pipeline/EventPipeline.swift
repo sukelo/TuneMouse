@@ -12,7 +12,11 @@ final class EventPipeline: EventProcessor {
     }
 
     func process(type: CGEventType, event: CGEvent) -> ProcessResult {
-        let context = ProcessingContext(frontmostBundleID: contextProvider.currentBundleID)
+        // 스크롤은 커서 아래 창으로 라우팅되므로 오버라이드도 커서 기준. 그 외(버튼)는 포커스 앱.
+        let targetBundleID = type == .scrollWheel
+            ? contextProvider.bundleID(atScreenPoint: event.location)
+            : contextProvider.currentBundleID
+        let context = ProcessingContext(targetBundleID: targetBundleID)
         var current = event
         var replaced = false
 
