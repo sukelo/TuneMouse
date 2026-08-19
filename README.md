@@ -3,7 +3,7 @@
 Mac Mouse Fix 류의 macOS 마우스 향상 앱(메뉴바 상주). 스크롤 변환·버튼 리매핑·앱별 오버라이드를
 **확장형 세 축**으로 설계해 쓰면서 하나씩 튜닝한다.
 
-> 현재 **Phase 0(셋업) 완료** — 실행되는 메뉴바 골격 + 권한 플로우 + 빌드/서명. 기능(이벤트 탭)은 Phase 1+.
+> 현재 **Phase 0~7 완료** — 이벤트 탭 인프라, 스크롤 방향/속도/부드러운 스크롤, 버튼 리매핑, 앱별 오버라이드까지 세 축 모두 실동작.
 
 ## 핵심 제약
 
@@ -40,4 +40,11 @@ Console.app에서 subsystem `com.tunemouse.TuneMouse` 로 필터링.
 - [SPEC.md](SPEC.md) — 기획/협의 정리, 세 축 설계, 백로그
 - [docs/phase-0-setup.md](docs/phase-0-setup.md) — Phase 0 작업/완료 기준
 - [docs/phase-0-refinements.md](docs/phase-0-refinements.md) — Phase 0 마무리 다듬기
+- [docs/phase-1-event-tap.md](docs/phase-1-event-tap.md) — Phase 1 이벤트 탭 인프라
+- [docs/phase-2-scroll.md](docs/phase-2-scroll.md) — Phase 2 스크롤 방향/속도
+- [docs/phase-3-button-remap.md](docs/phase-3-button-remap.md) — Phase 3 버튼 리매핑
+- [docs/phase-4-smooth-scroll.md](docs/phase-4-smooth-scroll.md) — Phase 4 부드러운 스크롤
+- [docs/phase-5-app-scroll-override.md](docs/phase-5-app-scroll-override.md) — Phase 5 앱별 스크롤 오버라이드
+- [docs/phase-6-app-scroll-editor.md](docs/phase-6-app-scroll-editor.md) — Phase 6 앱별 개별값 편집 UI
+- [docs/phase-7-scroll-cursor-target.md](docs/phase-7-scroll-cursor-target.md) — Phase 7 오버라이드 판단 기준을 커서 아래 앱으로 수정
 - [docs/signing.md](docs/signing.md) — 코드 서명 가이드
