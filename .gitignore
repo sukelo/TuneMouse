@@ -25,7 +25,22 @@ DerivedData/
 build/
 dist/
 
+# 배포 산출물
+*.dmg
+*.zip
+*.log
+
 # 환경 / 비밀
 .env
+.env.*
 *.p12
 *.cer
+*.pem
+*.key
+*.p8
+*.mobileprovision
+*.provisionprofile
+*.keychain
+
+# 로컬 에이전트/도구 설정
+.claude/

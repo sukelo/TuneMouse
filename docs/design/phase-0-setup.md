@@ -1,8 +1,11 @@
 # Phase 0 — 셋업 작업 파일
 
+> **작업 당시의 설계 노트입니다.** 체크박스와 완료 기준은 그 시점의 작업 목록이며,
+> 현재 구현 상태를 나타내지 않습니다. 최신 상태는 [README](../../README.md)를 보세요.
+
 > 목표: **"빈 껍데기지만 실행되고, 메뉴바에 뜨고, 접근성 권한까지 잡히는 앱"** 을 SwiftPM로 만든다.
 > 이벤트 탭/기능은 Phase 1 이후. 여기서는 토대와 빌드/실행 워크플로우만 완성한다.
-> 관련 결정사항은 [SPEC.md](../SPEC.md) 참조.
+> 관련 결정사항은 [SPEC.md](../../SPEC.md) 참조.
 
 ## Definition of Done (완료 기준)
 
@@ -69,7 +72,7 @@
 
 ### 6. Self-signed 코드 서명
 - [x] self-signed 코드서명 인증서 생성 ("TuneMouse Dev", 10년, 코드 서명) — 사용자 생성 완료
-- [x] `build.sh`에 인증서 자동 탐지 + `codesign --force --sign` 통합 (가이드: [signing.md](signing.md))
+- [x] `build.sh`에 인증서 자동 탐지 + `codesign --force --sign` 통합 (가이드: [signing.md](../signing.md))
 - [x] self-signed 서명 적용 + seal 검증 (Authority=TuneMouse Dev, Designated Requirement 만족)
 - [ ] 실제 권한 영속성 검증 — Phase 1에서 탭+권한 사용 시
 
@@ -103,5 +106,3 @@
 - 메뉴바 구현: `NSStatusItem`(권장) vs `MenuBarExtra` — 시작 시 확정
 - 임시 메뉴바 아이콘: SF Symbol 사용 (전용 아이콘은 후속)
 
-## 금지 구역 메모
-- **배포/공증/릴리스 스크립트는 Phase 0 범위 아님** (프로덕션 단계). 그런 스크립트는 직접 수정 않고 제안만 → 사용자가 적용. (`build.sh`/`run.sh`는 로컬 개발 도구라 직접 작성 OK.)

@@ -15,12 +15,14 @@
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleVersion</key>
-    <string>1</string>
+    <string>7</string>
     <key>CFBundleShortVersionString</key>
-    <string>0.0.1</string>
+    <string>0.7.0</string>
     <key>LSMinimumSystemVersion</key>
     <string>14.0</string>
     <key>LSUIElement</key>
     <true/>
+    <key>NSHumanReadableCopyright</key>
+    <string>Copyright (C) 2026 pizza. GNU General Public License v3.0 이상.</string>
 </dict>
 </plist>

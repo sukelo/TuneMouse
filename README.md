@@ -1,24 +1,66 @@
 # TuneMouse
 
-Mac Mouse Fix 류의 macOS 마우스 향상 앱(메뉴바 상주). 스크롤 변환·버튼 리매핑·앱별 오버라이드를
-**확장형 세 축**으로 설계해 쓰면서 하나씩 튜닝한다.
+macOS용 마우스 향상 앱(메뉴바 상주). 휠 스크롤과 추가 버튼을 원하는 대로 바꾸고, 앱마다 다르게 적용한다.
 
-> 현재 **Phase 0~7 완료** — 이벤트 탭 인프라, 스크롤 방향/속도/부드러운 스크롤, 버튼 리매핑, 앱별 오버라이드까지 세 축 모두 실동작.
+> **UI와 문서는 한국어입니다.** (The app UI and documentation are in Korean.)
+>
+> 배포용 바이너리는 아직 없습니다 — 소스에서 직접 빌드해야 합니다. ([빌드 & 실행](#빌드--실행))
 
-## 핵심 제약
+## 기능
 
-- **접근성(Accessibility) 권한 필수** — 마우스 이벤트 가공에 필요(시스템 설정에서 직접 허용).
-- **트랙패드는 건드리지 않는다** — 마우스 휠/버튼만 가공, 트랙패드 제스처는 OS 기본 통과.
-- **App Store 배포 불가** — 전역 이벤트 탭은 샌드박스에서 차단. 직접 배포(공증 DMG) 전제.
+**스크롤**
+- 방향 반전 — 세로/가로 각각
+- 속도 배율 조절
+- 가속 제거(균일 스크롤) — macOS가 휠 속도에 거는 가속 곡선을 버리고 **노치당 고정 거리**로
+- 부드러운 스크롤 — 계단식 휠을 이징 애니메이션으로
+
+**버튼**
+- 추가 버튼(4·5번 등)에 단축키 매핑 — 사파리 뒤로가기 같은 것
+- 프리셋 + 직접 캡처한 커스텀 단축키
+
+**앱별 오버라이드**
+- 앱마다 스크롤 설정을 따로 두거나, 아예 통과(가공 안 함)시키기 — 게임·원격 화면 등
+- 메뉴바에서 현재 앱 스크롤을 즉석 토글
+
+## 권한과 프라이버시
+
+TuneMouse는 **접근성(Accessibility) 권한**을 요구합니다. 이 권한은 기술적으로 시스템 전체의 입력을 관찰·합성할 수 있는 강한 권한이므로, 이 앱이 실제로 무엇을 하는지 밝힙니다.
+
+**하는 일**
+- 마우스 **휠 스크롤과 추가 버튼(2번 이상)** 이벤트만 가로채 가공 후 재전송합니다.
+- 버튼 매핑 실행 시 지정된 **단축키를 합성해 발사**합니다.
+- 앱별 오버라이드를 위해 커서 아래 창의 **소유 프로세스(PID)** 를 조회합니다.
+
+**하지 않는 일**
+- **키보드 입력을 감시하지 않습니다.** 이벤트 탭이 키보드 이벤트를 아예 구독하지 않습니다.
+- **트랙패드를 건드리지 않습니다.** 연속(정밀) 스크롤은 무조건 통과시킵니다 — 설계상 변경 불가 제약입니다.
+- **좌/우 클릭을 소비하지 않습니다.** 2번 미만 버튼은 코드에서 하드 가드로 막혀 있습니다.
+- **창 제목을 읽지 않습니다.** 창의 위치·PID·레이어만 읽으므로 **화면 기록 권한이 필요 없습니다.**
+- **네트워크 통신이 없습니다.** 서버 연결, 텔레메트리, 자동 업데이트 전부 없습니다. 의존성 패키지도 0개입니다.
+
+**설정 저장** — 로컬 `UserDefaults`(`com.tunemouse.TuneMouse`)에만 저장됩니다.
+
+권한을 주기 전에 직접 확인하고 싶다면 이벤트 탭 구독 목록은 `Sources/TuneMouse/EventTap/EventTapController.swift`, 통과 규칙은 `EventClassifier.swift`를 보면 됩니다.
+
+## 안전장치
+
+전역 이벤트 탭은 잘못되면 마우스가 먹통이 될 수 있는 물건이라 탈출구를 여러 겹 둡니다.
+
+- **패닉 키 `⌃⌥⌘M`** — 어디서든 전체 기능 즉시 on/off. (실수로 눌러 "앱이 죽은 것 같다"면 이걸 다시 누르세요.)
+- **메뉴바 토글** — 끄면 이벤트 탭을 완전히 해제해 오버헤드가 0이 됩니다.
+- **자동 복구** — macOS가 느린 탭을 비활성화하면 재활성화합니다. 단 짧은 시간에 반복되면 **포기하고 꺼진 상태로 둡니다** (멈춤↔재설치 반복 방지).
+- **정직한 아이콘** — 메뉴바 아이콘은 사용자가 켰는지가 아니라 **탭이 실제로 동작 중인지**를 표시합니다.
 
 ## 요구 환경
 
-- Apple Silicon(arm64), macOS 14+
-- Swift 6 / SwiftPM (풀 Xcode 불필요)
+- macOS 14+ / Swift 6 · SwiftPM (풀 Xcode 불필요, CommandLineTools로 빌드됨)
+- Apple Silicon에서 개발·검증. Intel은 빌드는 되지만 테스트되지 않음.
 
 ## 빌드 & 실행
 
 ```bash
+git clone <이 저장소>
+cd TuneMouse
 ./scripts/build.sh && ./scripts/run.sh
 ```
 
@@ -26,25 +68,59 @@ Mac Mouse Fix 류의 macOS 마우스 향상 앱(메뉴바 상주). 스크롤 변
 - `run.sh` — 기존 인스턴스 종료 후 실행
 - 릴리스 빌드: `CONFIG=release ./scripts/build.sh`
 
+실행하면 메뉴바에 마우스 아이콘이 생깁니다. 거기서 **설정…** 을 엽니다. (Dock에는 안 뜹니다.)
+
+처음 실행 시 접근성 권한을 요청합니다. 시스템 설정 > 개인정보 보호 및 보안 > 손쉬운 사용에서 TuneMouse를 허용한 뒤, 메뉴바에서 기능이 켜졌는지 확인하세요.
+
+> **Gatekeeper 경고는 안 뜹니다.** 직접 빌드한 앱은 quarantine 속성이 없어서 "확인되지 않은 개발자" 경고 대상이 아닙니다. 공증(notarization)은 DMG로 배포할 때 필요해지는 것이고, 소스 빌드에는 무관합니다.
+
 ## 코드 서명
 
-개인용 단계는 self-signed 인증서(`TuneMouse Dev`)로 서명해 리빌드 시 권한 재허용을 막는다.
-인증서 생성/사용법은 [docs/signing.md](docs/signing.md) 참고. 인증서가 있으면 `build.sh`가 자동 인식한다.
+인증서 없이도 빌드는 됩니다(ad-hoc 서명). 다만 **ad-hoc으로 빌드하면 리빌드할 때마다 접근성 권한을 다시 허용해야 합니다** — 권한이 코드 서명 정체성에 묶이기 때문입니다.
 
-## 로그
+자주 리빌드할 거라면 self-signed 인증서를 한 번 만들어 두는 걸 권합니다. 생성 방법은 [docs/signing.md](docs/signing.md)에 있고, 인증서가 있으면 `build.sh`가 자동으로 인식합니다.
 
-Console.app에서 subsystem `com.tunemouse.TuneMouse` 로 필터링.
+## 문제 해결
+
+**권한을 줬는데 아무 동작도 안 함 / 리빌드 후 멈춤**
+macOS의 고질적인 증상으로, 시스템 설정에는 **체크된 채로 보이는데 실제로는 무효**인 상태입니다. 손쉬운 사용 목록에서 TuneMouse를 `–`로 **제거한 뒤 다시 추가**하세요. ad-hoc 서명으로 빌드했다면 리빌드마다 발생합니다.
+
+**메뉴바 아이콘이 흐림**
+탭이 실제로 동작하지 않는 상태입니다. 접근성 권한을 확인하고, 그래도 안 되면 아래 로그를 보세요.
+
+**스크롤이 앱마다 적용됐다 안 됐다 함**
+스크롤 오버라이드는 포커스가 아니라 **커서 아래 창**의 앱 기준입니다(macOS가 휠 이벤트를 그렇게 라우팅하기 때문). 의도된 동작입니다.
+
+**로그 보기**
+```bash
+log stream --predicate 'subsystem == "com.tunemouse.TuneMouse"'
+```
+이벤트 단위 상세 로그가 필요하면:
+```bash
+defaults write com.tunemouse.TuneMouse debugEventLogging -bool true
+```
+(버그 리포트에 이 로그를 첨부해 주시면 도움이 됩니다. 끄려면 `-bool false`.)
+
+## 삭제
+
+```bash
+# 1. 앱 종료 (메뉴바 > TuneMouse 종료)
+# 2. 번들 삭제
+rm -rf dist/TuneMouse.app
+# 3. 설정 삭제
+defaults delete com.tunemouse.TuneMouse
+```
+시스템 설정 > 손쉬운 사용에서 TuneMouse 항목도 제거하세요. 로그인 항목으로 등록했다면 시스템 설정 > 일반 > 로그인 항목에서도 빼야 합니다.
+
+## 라이선스
+
+[GNU General Public License v3.0](LICENSE) 이상.
 
 ## 문서
 
 - [SPEC.md](SPEC.md) — 기획/협의 정리, 세 축 설계, 백로그
-- [docs/phase-0-setup.md](docs/phase-0-setup.md) — Phase 0 작업/완료 기준
-- [docs/phase-0-refinements.md](docs/phase-0-refinements.md) — Phase 0 마무리 다듬기
-- [docs/phase-1-event-tap.md](docs/phase-1-event-tap.md) — Phase 1 이벤트 탭 인프라
-- [docs/phase-2-scroll.md](docs/phase-2-scroll.md) — Phase 2 스크롤 방향/속도
-- [docs/phase-3-button-remap.md](docs/phase-3-button-remap.md) — Phase 3 버튼 리매핑
-- [docs/phase-4-smooth-scroll.md](docs/phase-4-smooth-scroll.md) — Phase 4 부드러운 스크롤
-- [docs/phase-5-app-scroll-override.md](docs/phase-5-app-scroll-override.md) — Phase 5 앱별 스크롤 오버라이드
-- [docs/phase-6-app-scroll-editor.md](docs/phase-6-app-scroll-editor.md) — Phase 6 앱별 개별값 편집 UI
-- [docs/phase-7-scroll-cursor-target.md](docs/phase-7-scroll-cursor-target.md) — Phase 7 오버라이드 판단 기준을 커서 아래 앱으로 수정
+- [CLAUDE.md](CLAUDE.md) — 아키텍처 개요와 변경 불가 제약
 - [docs/signing.md](docs/signing.md) — 코드 서명 가이드
+- [docs/design/](docs/design/) — 단계별 설계 노트와 시행착오 기록(작업 당시 문서)
+
+이슈와 PR 환영합니다.

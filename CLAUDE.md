@@ -4,14 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 프로젝트 현황
 
-TuneMouse는 Mac Mouse Fix 류의 macOS 마우스 향상 앱(메뉴바 앱)이다. **Phase 0~7 구현·검증 완료** — `Sources/TuneMouse/`에 32개 Swift 파일(약 1,600줄)로 세 축(스크롤 파이프라인/액션 매핑/앱별 오버라이드)이 모두 실동작한다. `SPEC.md`(협의 정리)가 설계 단일 진실 공급원이고, `docs/phase-N-*.md`가 단계별 작업/완료 기준 기록이다. 결정/계획을 바꾸면 해당 문서도 갱신한다.
+TuneMouse는 Mac Mouse Fix 류의 macOS 마우스 향상 앱(메뉴바 앱)이다. **Phase 0~7 구현·검증 완료** — `Sources/TuneMouse/`에 32개 Swift 파일(약 1,600줄)로 세 축(스크롤 파이프라인/액션 매핑/앱별 오버라이드)이 모두 실동작한다. `SPEC.md`(협의 정리)가 설계 단일 진실 공급원이고, `docs/design/phase-N-*.md`가 단계별 작업/완료 기준 기록이다. 결정/계획을 바꾸면 해당 문서도 갱신한다.
 
 언어는 협의/문서 모두 한국어다. 커밋 메시지도 한국어로 작성한다.
 
 ## 기술 스택 / 빌드
 
 - Swift 6 + SwiftUI(설정창) + AppKit(`NSStatusItem` 메뉴바). 빌드는 **SwiftPM** (`Package.swift`, `executableTarget`, `.macOS(.v14)`). 타깃 arm64.
-- **중요**: 이 머신은 **Xcode 미설치, CommandLineTools만** 있다. `xcodebuild`/Xcode 프로젝트 워크플로우를 가정하지 말 것. 빌드 검증은 `swift build`.
+- **중요**: **풀 Xcode 없이 CommandLineTools만으로 빌드되어야 한다**(개발 환경 제약). `xcodebuild`/Xcode 프로젝트 워크플로우를 가정하지 말 것. 빌드 검증은 `swift build`.
 - 실행 파일은 SwiftPM 산출물을 `.app` 번들 구조(`TuneMouse.app/Contents/{MacOS,Resources}` + 주입된 Info.plist)로 수동 조립해야 동작한다. SwiftPM은 GUI 앱 번들을 자동 생성하지 않는다.
 - 개발 루프: `scripts/build.sh`(빌드+번들 조립+self-signed 서명) → `scripts/run.sh`(기존 인스턴스 종료 후 `.app` 실행). 이 두 스크립트는 로컬 개발 도구이므로 직접 작성/수정해도 된다.
 
@@ -22,7 +22,7 @@ TuneMouse는 Mac Mouse Fix 류의 macOS 마우스 향상 앱(메뉴바 앱)이�
 1. **스크롤 변환 파이프라인**(`Pipeline/`, `Transformers/`) — 입력 휠 이벤트 → 변환 단계 체인(방향/스텝/듀레이션/부드러움/가속) → 출력. `Transformers/`에 Direction·Speed·Accel·SmoothScroll 4개 변환기가 플러그인처럼 끼워지며, on/off + 파라미터(튜닝 가능)를 가진다.
 2. **액션 매핑 엔진**(`Actions/`) — 트리거(버튼/클릭/홀드/드래그 + modifier) → 액션(단축키 발사/내비게이션/미션컨트롤 등). `KeystrokeEngine` 하나로 대부분 커버, 액션 종류는 확장형.
 3. **앱별 오버라이드 레이어**(`Pipeline/AppContextProvider.swift`, `Settings/AppScrollOverrideView.swift`) — bundle id로 규칙 resolve. 모드: 수정 / 통과(예외) / 커스텀. 위 두 축 모두 이 레이어로 앱별 조정 가능.
-   - **주의**: 이벤트 타입별로 resolve 기준이 다르다. 스크롤은 **커서 아래 창의 앱**(macOS가 휠 이벤트를 커서 위치로 라우팅하기 때문, `docs/phase-7-scroll-cursor-target.md` 참고), 버튼은 frontmost 앱(`NSWorkspace`) 기준. 새 축을 앱별 오버라이드에 연결할 땐 어느 기준이 맞는지 먼저 판단할 것.
+   - **주의**: 이벤트 타입별로 resolve 기준이 다르다. 스크롤은 **커서 아래 창의 앱**(macOS가 휠 이벤트를 커서 위치로 라우팅하기 때문, `docs/design/phase-7-scroll-cursor-target.md` 참고), 버튼은 frontmost 앱(`NSWorkspace`) 기준. 새 축을 앱별 오버라이드에 연결할 땐 어느 기준이 맞는지 먼저 판단할 것.
 
 설정 데이터 모델은 **글로벌 기본 + 앱별 override** 구조로 짜여 있다(`Settings/ScrollSettings.swift`, `Actions/ButtonMappingStore.swift`; 나중에 멀티 마우스 프로필도 같은 패턴으로 확장 가능). 저장은 `UserDefaults`(추후 JSON 가져오기/내보내기 예정).
 
@@ -38,13 +38,22 @@ TuneMouse는 Mac Mouse Fix 류의 macOS 마우스 향상 앱(메뉴바 앱)이�
 
 ## 안전 설계 (필수 동작)
 
-- 이벤트 탭이 느리면 macOS가 자동 비활성화 → **재활성화 로직** 필요.
-- **패닉 키**(전역 토글 단축키) + 메뉴바 토글로 언제든 전체 기능을 즉시 끌 수 있어야 한다.
+이 앱은 전역 입력 핫패스에 있다. 아래는 "사용자 맥의 마우스를 먹통으로 만들지 않는다"는 약속이며, 기능 추가보다 우선한다.
+
+- 이벤트 탭이 느리면 macOS가 자동 비활성화 → **재활성화 로직** 필요. 단 **무조건 즉시 재활성화 금지** — 콜백이 지속적으로 느리면 "멈춤 → 해제 → 재설치 → 멈춤"이 반복되어 시스템 전체 마우스가 얼어붙는다. 반복 시 포기하고 꺼진 채로 두는 백오프가 있다(`EventTapController.recentTimeouts`).
+- **패닉 키**(전역 토글 단축키 ⌃⌥⌘M) + 메뉴바 토글로 언제든 전체 기능을 즉시 끌 수 있어야 한다. "끔"은 잔여 상태까지 즉시 중단을 뜻한다 — 새 변환기가 비동기 상태(타이머/애니메이터)를 가지면 `reset()`을 만들고 `AppDelegate`의 비활성 분기에 반드시 연결할 것.
+- **좌/우 클릭(버튼 0·1)은 절대 소비하지 않는다.** 소비되면 사용자가 우리 메뉴바조차 누를 수 없어 복구 수단이 사라진다. 이벤트 마스크에서 제외 + `ButtonRemapTransformer.minRemappableButton` 하드 가드, 이중으로 막혀 있다.
+- **핫패스에서 비싼 조회 금지.** 커서-앱 조회는 WindowServer 동기 IPC다. `ProcessingContext`가 지연 해석하고 `resolved(for:)`가 빈 `perApp`을 단락 평가하므로, 오버라이드가 없으면 조회 자체가 일어나지 않는다. 이 구조를 깨지 말 것.
+- 메뉴바 표시는 사용자의 의사(`isEnabled`)가 아니라 **탭 실동작 여부**(`isTapActive`)를 따른다. 동작하지 않는데 켜졌다고 표시하지 않는다.
 
 ## 구현 순서 (전 단계 완료)
 
-Phase 0(셋업: 실행되는 메뉴바 골격 + 권한 플로우 + 빌드 스크립트) → Phase 1(이벤트 탭 인프라) → Phase 2(스크롤 방향/속도) → Phase 3(버튼 리매핑) → Phase 4(부드러운 스크롤) → Phase 5(앱별 스크롤 오버라이드) → Phase 6(앱별 개별값 편집 UI) → Phase 7(스크롤 오버라이드 판단 기준을 frontmost → 커서 아래 앱으로 수정). 기능 우선순위는 버튼 리매핑이 1순위였지만, **탭 동작을 빠르게 검증하기 위해 스크롤 방향/속도(Phase 2)를 먼저** 구현하는 순서를 택했다. 각 단계 세부는 `docs/phase-N-*.md` 참고. 다음 단계를 시작할 때는 이 목록에 이어서 Phase 8부터 문서를 추가한다.
+Phase 0(셋업: 실행되는 메뉴바 골격 + 권한 플로우 + 빌드 스크립트) → Phase 1(이벤트 탭 인프라) → Phase 2(스크롤 방향/속도) → Phase 3(버튼 리매핑) → Phase 4(부드러운 스크롤) → Phase 5(앱별 스크롤 오버라이드) → Phase 6(앱별 개별값 편집 UI) → Phase 7(스크롤 오버라이드 판단 기준을 frontmost → 커서 아래 앱으로 수정). 기능 우선순위는 버튼 리매핑이 1순위였지만, **탭 동작을 빠르게 검증하기 위해 스크롤 방향/속도(Phase 2)를 먼저** 구현하는 순서를 택했다. 각 단계 세부는 `docs/design/phase-N-*.md` 참고. 다음 단계를 시작할 때는 이 목록에 이어서 Phase 8부터 문서를 추가한다.
+
+## 라이선스
+
+GPL-3.0-or-later. 외부 코드를 가져올 때는 라이선스 호환성을 먼저 확인하고, 출처를 주석과 커밋 메시지에 남긴다. 현재 이 저장소는 의존성 0개이며 전량 직접 작성된 코드다 — 그 상태를 유지한다.
 
 ## 금지 구역
 
-배포/공증/릴리스 스크립트, `.env` 류 환경 파일은 직접 수정하지 않는다 — 변경안을 제안하고 사용자가 적용한다. (`build.sh`/`run.sh`는 로컬 개발 도구라 예외.)
+배포/공증/릴리스 스크립트, `.env` 류 환경 파일은 에이전트가 직접 수정하지 않는다 — 변경안을 제안하고 사람이 적용한다. (`build.sh`/`run.sh`는 로컬 개발 도구라 예외.)

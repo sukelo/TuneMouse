@@ -1,8 +1,11 @@
 # Phase 7 — 스크롤 오버라이드를 "커서 아래 앱" 기준으로 (버그픽스)
 
+> **작업 당시의 설계 노트입니다.** 체크박스와 완료 기준은 그 시점의 작업 목록이며,
+> 현재 구현 상태를 나타내지 않습니다. 최신 상태는 [README](../../README.md)를 보세요.
+
 > 목표: 앱별 스크롤 오버라이드가 **포커스(frontmost) 앱**이 아니라 **커서 아래 창의 앱**으로 resolve되게 한다.
 > 증상: 특정 앱(예: cmux) override가 **적용됐다 안 됐다** 함.
-> 관련: [SPEC.md](../SPEC.md), [phase-5-app-scroll-override.md](phase-5-app-scroll-override.md), [phase-6-app-scroll-editor.md](phase-6-app-scroll-editor.md)
+> 관련: [SPEC.md](../../SPEC.md), [phase-5-app-scroll-override.md](phase-5-app-scroll-override.md), [phase-6-app-scroll-editor.md](phase-6-app-scroll-editor.md)
 
 ## 배경 / 증상
 
@@ -103,5 +106,3 @@ Sources/TuneMouse/Transformers/Scroll*Transformer.swift # 새 필드로 resolve 
 ## 실행 순서
 1(커서-앱 조회 + 캐시) → 2(파이프라인 배선) → 시드 값으로 호버 스크롤 검증 → 3 최종 검증.
 
-## 금지 구역 메모
-- 배포/공증 스크립트는 손대지 않음. `build.sh`/`run.sh`만 로컬 도구로 갱신 가능.

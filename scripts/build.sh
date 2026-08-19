@@ -45,4 +45,16 @@ fi
 echo "==> codesign (identity: $IDENTITY)"
 codesign --force --sign "$IDENTITY" "$APP"
 
+if [[ "$IDENTITY" == "-" ]]; then
+    cat >&2 <<'WARN'
+
+!! ad-hoc 서명으로 빌드했습니다.
+   접근성 권한은 코드 서명 정체성에 묶이므로, 리빌드할 때마다 권한을 다시 허용해야 합니다.
+   (시스템 설정에는 체크된 채로 보이지만 실제로는 무효인 상태가 흔합니다 —
+    손쉬운 사용 목록에서 TuneMouse를 제거했다 다시 추가하세요.)
+
+   자주 리빌드한다면 self-signed 인증서를 한 번 만들어 두세요: docs/signing.md
+WARN
+fi
+
 echo "==> 완료: $APP"

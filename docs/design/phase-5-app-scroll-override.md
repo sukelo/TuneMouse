@@ -1,8 +1,11 @@
 # Phase 5 — 앱별 스크롤 오버라이드 작업 파일
 
+> **작업 당시의 설계 노트입니다.** 체크박스와 완료 기준은 그 시점의 작업 목록이며,
+> 현재 구현 상태를 나타내지 않습니다. 최신 상태는 [README](../../README.md)를 보세요.
+
 > 목표: **축3(앱별 오버라이드)을 스크롤까지 완성.** 핵심은 **"통과(예외)" 모드** — 특정 앱에서 스크롤 가공을 끈다.
 > 백로그 직결: **아이폰 미러링 스크롤 이상**, **게임 예외**.
-> 관련: [SPEC.md](../SPEC.md), 이전: [phase-4-smooth-scroll.md](phase-4-smooth-scroll.md)
+> 관련: [SPEC.md](../../SPEC.md), 이전: [phase-4-smooth-scroll.md](phase-4-smooth-scroll.md)
 
 ## 배경
 
@@ -65,5 +68,3 @@ Sources/TuneMouse/Settings/SettingsView.swift / 신규 뷰         # 앱별 예�
 - `StatusItemController`에 `현재 앱: <이름>` 라벨 + `이 앱에서 스크롤 끄기` 체크 토글. `menuWillOpen`에서 `NSWorkspace.frontmostApplication`로 갱신(상태 메뉴는 accessory 앱을 활성화하지 않아 실제 앞 앱 유지). 우리 앱/미식별 앱은 비활성.
 - 토글은 `scrollSettings.perApp[id].passthrough`를 뒤집음. 새 항목은 전역 복사 기반(Phase 6 모델), 해제로 전역과 같아지면 항목 자동 제거. 변경은 `@Published`로 변환기에 즉시 반영.
 
-## 금지 구역 메모
-- 배포/공증 스크립트는 손대지 않음. `build.sh`/`run.sh`만 로컬 도구로 갱신 가능.

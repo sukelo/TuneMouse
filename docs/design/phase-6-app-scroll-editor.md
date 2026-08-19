@@ -1,12 +1,15 @@
 # Phase 6 — 앱별 스크롤 개별값 편집 UI 작업 파일
 
+> **작업 당시의 설계 노트입니다.** 체크박스와 완료 기준은 그 시점의 작업 목록이며,
+> 현재 구현 상태를 나타내지 않습니다. 최신 상태는 [README](../../README.md)를 보세요.
+
 > 목표: **Phase 5에서 deferred했던 "앱별 방향/속도/가속제거/부드러움 개별값 편집"을 UI로 노출.**
 > 엔진(`resolved(forBundleID:)`)·데이터 모델은 이미 앱별을 완전 지원 — **순수 UI 작업**이다.
-> 관련: [SPEC.md](../SPEC.md), 이전: [phase-5-app-scroll-override.md](phase-5-app-scroll-override.md)
+> 관련: [SPEC.md](../../SPEC.md), 이전: [phase-5-app-scroll-override.md](phase-5-app-scroll-override.md)
 
 ## 배경
 
-- 현재 앱별 스크롤 UI([AppScrollOverrideView.swift](../Sources/TuneMouse/Settings/AppScrollOverrideView.swift))는 오버라이드 추가 시 `ScrollConfig()` + `passthrough = true`만 세팅 → 실질적으로 **"통과(예외)" 하나만** 노출.
+- 현재 앱별 스크롤 UI([AppScrollOverrideView.swift](../../Sources/TuneMouse/Settings/AppScrollOverrideView.swift))는 오버라이드 추가 시 `ScrollConfig()` + `passthrough = true`만 세팅 → 실질적으로 **"통과(예외)" 하나만** 노출.
 - 엔진은 앱별 방향/속도/가속제거/부드러움을 이미 다 해석(각 변환기 `isEnabled`가 `perApp.values`까지 검사). **UI만 비어 있음.**
 - `resolved`는 **교체 semantics**(앱 오버라이드가 있으면 글로벌 통째 대체, 필드 병합 아님). 이번 단계도 **교체 유지** — 병합 모드는 별건.
 
@@ -32,7 +35,7 @@
 ## 작업 항목
 
 ### 1. 편집 뷰 추출 — `ScrollConfigEditor`
-- [x] 전역 컨트롤을 재사용 뷰([ScrollConfigEditor.swift](../Sources/TuneMouse/Settings/ScrollConfigEditor.swift))로 분리.
+- [x] 전역 컨트롤을 재사용 뷰([ScrollConfigEditor.swift](../../Sources/TuneMouse/Settings/ScrollConfigEditor.swift))로 분리.
   ```swift
   struct ScrollConfigEditor: View {
       @Binding var config: ScrollConfig
@@ -48,7 +51,7 @@
 - [x] `scrollSection` → `ScrollConfigEditor(config: $scrollSettings.settings.global)`.
 - [x] "기본값으로" 버튼 유지.
 
-### 3. 앱별 섹션 재작성 ([AppScrollOverrideView.swift](../Sources/TuneMouse/Settings/AppScrollOverrideView.swift))
+### 3. 앱별 섹션 재작성 ([AppScrollOverrideView.swift](../../Sources/TuneMouse/Settings/AppScrollOverrideView.swift))
 - [x] 각 앱 항목을 `DisclosureGroup`으로:
   - 헤더: 앱 이름 + 상태 요약(예: `통과` / `속도 2×` / `반전·부드러움`) + 삭제 버튼.
   - 펼침: `ScrollConfigEditor(config: configBinding(id), includePassthrough: true)`.
@@ -79,5 +82,3 @@ Sources/TuneMouse/Settings/AppScrollOverrideView.swift   # DisclosureGroup 편�
 ## 실행 순서
 1(편집 뷰 추출) → 2(전역 교체로 동등성 확인) → 3(앱별 재작성) → 4(검증).
 
-## 금지 구역 메모
-- 배포/공증 스크립트는 손대지 않음. `build.sh`/`run.sh`만 로컬 도구로 갱신 가능.

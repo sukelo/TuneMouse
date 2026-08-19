@@ -1,8 +1,11 @@
 # Phase 4 — 부드러운 스크롤 작업 파일
 
+> **작업 당시의 설계 노트입니다.** 체크박스와 완료 기준은 그 시점의 작업 목록이며,
+> 현재 구현 상태를 나타내지 않습니다. 최신 상태는 [README](../../README.md)를 보세요.
+
 > 목표: 계단식 휠 스크롤을 **관성·이징이 있는 부드러운 픽셀 스크롤**로 변환.
 > 백로그 직결: 스크롤 **스텝/듀레이션/부드러움 on·off**. 가장 복잡한 단계(애니메이션 루프 + 물리 모델 + 재진입).
-> 관련: [SPEC.md](../SPEC.md), 이전: [phase-3-button-remap.md](phase-3-button-remap.md)
+> 관련: [SPEC.md](../../SPEC.md), 이전: [phase-3-button-remap.md](phase-3-button-remap.md)
 
 ## 핵심 아이디어 (재진입이 자연스럽게 풀림)
 
@@ -107,5 +110,3 @@ Sources/TuneMouse/Settings/SettingsView.swift           # 스크롤 섹션 확�
 - 스트레스 스크롤로 지연/타임아웃/폭주 없음 확인.
 - 트랙패드 스크롤 무영향.
 
-## 금지 구역 메모
-- 배포/공증 스크립트는 손대지 않음. `build.sh`/`run.sh`만 로컬 도구로 갱신 가능.

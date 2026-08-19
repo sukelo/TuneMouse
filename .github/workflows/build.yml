@@ -1,0 +1,26 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    name: swift build (macOS)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Swift 버전
+        run: swift --version
+
+      - name: 빌드 (debug)
+        run: swift build -c debug
+
+      - name: 빌드 (release)
+        run: swift build -c release
+
+      # .app 번들 조립 + ad-hoc 서명까지 실제 개발 루프대로 검증
+      - name: 번들 조립 스크립트
+        run: ./scripts/build.sh
