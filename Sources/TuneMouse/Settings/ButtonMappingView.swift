@@ -2,10 +2,35 @@ import SwiftUI
 import AppKit
 import CoreGraphics
 
+/// 녹화 중 창이 닫히거나 포커스를 잃으면 스스로 멈추는 공통 처리.
+///
+/// 이게 없으면 로컬 모니터가 살아남는다. 모니터는 이벤트를 `nil`로 소비하므로,
+/// 단축키 녹화 중 설정창을 닫으면 **그 뒤 앱의 모든 키 입력이 삼켜진다**.
+/// (설정창은 `isReleasedWhenClosed = false`로 캐시되어 녹화기가 계속 살아 있다.)
+@MainActor
+class AutoStoppingRecorder: NSObject {
+    /// 하위 클래스가 구현 — 실제 정지 동작.
+    func stop() {}
+
+    fileprivate func observeLifecycle() {
+        let center = NotificationCenter.default
+        for name in [NSWindow.willCloseNotification, NSWindow.didResignKeyNotification] {
+            center.addObserver(self, selector: #selector(lifecycleStop), name: name, object: nil)
+        }
+    }
+
+    fileprivate func stopObservingLifecycle() {
+        NotificationCenter.default.removeObserver(self, name: NSWindow.willCloseNotification, object: nil)
+        NotificationCenter.default.removeObserver(self, name: NSWindow.didResignKeyNotification, object: nil)
+    }
+
+    @objc private func lifecycleStop() { stop() }
+}
+
 /// 단축키 캡처: 녹화 모드에서 다음 keyDown을 잡아 KeyCombo로 변환.
 /// 설정창이 키 윈도우일 때 local monitor로 동작.
 @MainActor
-final class ShortcutRecorder: ObservableObject {
+final class ShortcutRecorder: AutoStoppingRecorder, ObservableObject {
     @Published var combo: KeyCombo?
     @Published var isRecording = false
     private var monitor: Any?
@@ -13,15 +38,17 @@ final class ShortcutRecorder: ObservableObject {
     func start() {
         guard !isRecording else { return }
         isRecording = true
+        observeLifecycle()
         monitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { [weak self] event in
             self?.capture(event)
             return nil // 이벤트 소비(삑 소리/입력 방지)
         }
     }
 
-    func stop() {
+    override func stop() {
         if let monitor { NSEvent.removeMonitor(monitor) }
         monitor = nil
+        stopObservingLifecycle()
         isRecording = false
     }
 
@@ -46,7 +73,7 @@ final class ShortcutRecorder: ObservableObject {
 /// **좌/우 클릭은 잡지 않는다**(.otherMouseDown만 감시 → 휠클릭=2, 옆버튼=3,4,… 만 캡처).
 /// 이로써 사용자가 CG 번호 체계(0-based)를 몰라도 실제 버튼을 눌러 지정할 수 있다.
 @MainActor
-final class MouseButtonRecorder: ObservableObject {
+final class MouseButtonRecorder: AutoStoppingRecorder, ObservableObject {
     @Published var button: Int?
     @Published var isRecording = false
     private var monitor: Any?
@@ -55,15 +82,17 @@ final class MouseButtonRecorder: ObservableObject {
         guard !isRecording else { return }
         isRecording = true
         button = nil
+        observeLifecycle()
         monitor = NSEvent.addLocalMonitorForEvents(matching: [.otherMouseDown]) { [weak self] event in
             self?.capture(event)
             return nil // 이벤트 소비
         }
     }
 
-    func stop() {
+    override func stop() {
         if let monitor { NSEvent.removeMonitor(monitor) }
         monitor = nil
+        stopObservingLifecycle()
         isRecording = false
     }
 
@@ -98,6 +127,7 @@ enum MouseButtonNames {
 /// 홀드/더블/드래그 트리거는 후속.
 struct ButtonMappingSection: View {
     @ObservedObject var store: ButtonMappingStore
+    @ObservedObject var appState: AppState
     @StateObject private var apps = RunningAppsModel()
 
     @State private var scopeIsGlobal = true
@@ -116,6 +146,15 @@ struct ButtonMappingSection: View {
             addForm
         }
         .onAppear { if bundleID.isEmpty { bundleID = apps.apps.first?.id ?? "" } }
+        // 녹화 중에는 버튼 리매핑을 중단해야 이미 매핑된 버튼도 다시 지정할 수 있다.
+        .onChange(of: buttonRecorder.isRecording) { _, recording in
+            appState.isCapturingButton = recording
+        }
+        .onDisappear {
+            recorder.stop()
+            buttonRecorder.stop()
+            appState.isCapturingButton = false
+        }
     }
 
     // MARK: 목록

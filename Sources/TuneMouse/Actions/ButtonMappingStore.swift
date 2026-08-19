@@ -9,7 +9,7 @@ struct ButtonMapping: Codable, Equatable, Identifiable {
 
 /// 글로벌 + 앱별 오버라이드 구조(Phase 2 ScrollSettings와 동일 패턴).
 /// 앱 오버라이드가 있으면 글로벌을 대체(통과=빈 배열, 커스텀=자체 목록).
-struct ButtonMappings: Codable, Equatable {
+struct ButtonMappings: Codable, Equatable, DefaultInitializable {
     var global: [ButtonMapping] = []
     var perApp: [String: [ButtonMapping]] = [:]
 
@@ -34,16 +34,10 @@ final class ButtonMappingStore: ObservableObject {
     private let key = "buttonMappings"
 
     init() {
-        if let data = UserDefaults.standard.data(forKey: key),
-           let decoded = try? JSONDecoder().decode(ButtonMappings.self, from: data) {
-            mappings = decoded
-        } else {
-            mappings = ButtonMappings()
-        }
+        mappings = SettingsStorage.load(ButtonMappings.self, key: key, label: "버튼 매핑")
     }
 
     private func save() {
-        guard let data = try? JSONEncoder().encode(mappings) else { return }
-        UserDefaults.standard.set(data, forKey: key)
+        SettingsStorage.save(mappings, key: key, label: "버튼 매핑")
     }
 }

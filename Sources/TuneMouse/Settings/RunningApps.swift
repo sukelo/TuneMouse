@@ -26,7 +26,7 @@ final class RunningAppsModel: ObservableObject {
         apps = NSWorkspace.shared.runningApplications
             .filter { $0.activationPolicy == .regular }
             .compactMap { app -> RunningApp? in
-                guard let id = app.bundleIdentifier, id != "com.tunemouse.TuneMouse" else { return nil }
+                guard let id = app.bundleIdentifier, id != Bundle.main.bundleIdentifier else { return nil }
                 return RunningApp(id: id, name: app.localizedName ?? id, icon: app.icon)
             }
             .sorted { $0.name < $1.name }

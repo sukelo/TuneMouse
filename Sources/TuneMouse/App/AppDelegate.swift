@@ -70,7 +70,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let hotKey = PanicHotKey(onTrigger: { [weak self] in
             self?.appState.isEnabled.toggle()
         })
-        hotKey.register()
+        let registered = hotKey.register()
+        appState.setPanicHotKeyRegistered(registered)
         panicHotKey = hotKey
 
         // 워치독(3초): 런타임 권한 변화 반영(F2) + 탭이 죽었으면 재활성화(F4)
@@ -87,6 +88,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // 버튼 매핑 → 변환기 라이브 반영
         buttonMappings.$mappings
             .sink { [weak self] mappings in self?.buttonRemap.mappings = mappings }
+            .store(in: &cancellables)
+
+        // 버튼 녹화 중에는 리매핑이 이벤트를 삼키지 않게 일시 중단 — 재지정을 가능하게.
+        appState.$isCapturingButton
+            .sink { [weak self] capturing in self?.buttonRemap.isSuspended = capturing }
             .store(in: &cancellables)
     }
 

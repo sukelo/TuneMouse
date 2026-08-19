@@ -10,6 +10,12 @@ final class ButtonRemapTransformer: EventTransformer {
     /// down을 소비한 버튼 — up/drag도 소비해야 시스템이 눌린 상태로 고착되지 않음.
     private var consumedButtons = Set<Int64>()
 
+    /// 설정창에서 버튼을 녹화하는 동안 true — 이벤트를 소비하지 않고 앱까지 통과시킨다.
+    /// 소비하면 **이미 매핑된 버튼을 다시 지정할 수 없다**(녹화기 대신 기존 동작이 발사됨).
+    var isSuspended = false {
+        didSet { if isSuspended { consumedButtons.removeAll() } } // 중단 시점에 눌려 있던 버튼 잔류 방지
+    }
+
     /// 기능 비활성/탭 해제 시 호출 — 소비 상태 초기화(버튼을 누른 채 꺼졌을 때 잔류 방지).
     func reset() { consumedButtons.removeAll() }
 
@@ -21,13 +27,19 @@ final class ButtonRemapTransformer: EventTransformer {
     private static let minRemappableButton: Int64 = 2
 
     func transform(event: CGEvent, type: CGEventType, context: ProcessingContext) -> ProcessResult {
+        guard !isSuspended else { return .passUnchanged }
         switch type {
         case .otherMouseDown, .leftMouseDown, .rightMouseDown:
             let button = event.getIntegerValueField(.mouseEventButtonNumber)
             guard button >= Self.minRemappableButton else { return .passUnchanged }
             let active = mappings.resolved(for: context)
             let mods = event.flags.intersection(Self.modifierMask).rawValue
-            if let mapping = active.first(where: { $0.trigger.button == button && $0.trigger.modifiers == mods }) {
+            // modifier 조합이 정확히 일치하는 매핑을 우선, 없으면 modifier 없는 매핑으로 폴백.
+            // 폴백이 없으면 Shift 등을 누른 채 옆버튼을 눌렀을 때 매핑이 조용히 안 먹는다
+            // (현재 UI는 trigger.modifiers를 항상 0으로 만든다).
+            let candidates = active.filter { $0.trigger.button == button }
+            if let mapping = candidates.first(where: { $0.trigger.modifiers == mods })
+                ?? candidates.first(where: { $0.trigger.modifiers == 0 }) {
                 fire(mapping.action)
                 consumedButtons.insert(button)
                 Log.action.debug("버튼 \(button) 매칭 → 발사, 소비")

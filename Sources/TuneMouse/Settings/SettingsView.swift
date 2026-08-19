@@ -61,8 +61,24 @@ struct SettingsView: View {
             SettingsCard("전원", systemImage: "power") {
                 Toggle(isOn: $appState.isEnabled) {
                     Text("TuneMouse 켜기")
-                    Text("전체 기능 켜기/끄기 · 패닉키 ⌃⌥⌘M")
-                        .font(.caption).foregroundStyle(.secondary)
+                    if appState.panicHotKeyRegistered {
+                        Text("전체 기능 켜기/끄기 · 패닉키 \(PanicHotKey.displayName)")
+                            .font(.caption).foregroundStyle(.secondary)
+                    } else {
+                        // 등록에 실패한 조합을 계속 안내하면 없는 탈출구를 믿게 된다.
+                        Text("전체 기능 켜기/끄기 · 패닉키 \(PanicHotKey.displayName) 등록 실패 — 다른 앱이 선점했을 수 있습니다. 이 토글이나 메뉴바로 끄세요.")
+                            .font(.caption).foregroundStyle(.orange)
+                    }
+                }
+
+                if appState.isEnabled && !appState.isTapActive {
+                    Divider()
+                    Label(
+                        "켜져 있지만 실제로 동작하지 않습니다 — 접근성 권한을 확인하세요. 권한이 이미 허용돼 있다면 목록에서 TuneMouse를 제거했다가 다시 추가해 보세요.",
+                        systemImage: "exclamationmark.triangle"
+                    )
+                    .font(.caption)
+                    .foregroundStyle(.orange)
                 }
                 Divider()
                 Toggle("로그인 시 자동 시작", isOn: Binding(
@@ -117,7 +133,7 @@ struct SettingsView: View {
             offHint
             SettingsCard("버튼 매핑", systemImage: "cursorarrow.click",
                          subtitle: "옆 버튼·휠 클릭에 동작 연결") {
-                ButtonMappingSection(store: buttonMappings)
+                ButtonMappingSection(store: buttonMappings, appState: appState)
             }
             .opacity(appState.isEnabled ? 1 : 0.55)
         }

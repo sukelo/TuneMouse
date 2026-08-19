@@ -132,6 +132,12 @@ final class EventTapController {
             return Unmanaged.passUnretained(event)
         }
 
+        // 우리가 합성한 이벤트는 무조건 통과 — 재진입/무한 재귀 방지의 1차 방어선.
+        if SynthesizedEvent.isOurs(event) {
+            Log.tap.debug("합성 이벤트 마커 감지 → 통과(재진입 차단)")
+            return Unmanaged.passUnretained(event)
+        }
+
         // 트랙패드/연속 스크롤은 절대 건드리지 않고 통과 (변경 불가 제약)
         if type == .scrollWheel, EventClassifier.isContinuousScroll(event) {
             return Unmanaged.passUnretained(event)

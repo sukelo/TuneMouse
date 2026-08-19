@@ -24,6 +24,13 @@ final class AppState: ObservableObject {
     /// 권한/설치 실패/과부하 포기로 실제 동작하지 않을 수 있다 — 메뉴바 표시는 이 값을 따른다.
     @Published private(set) var isTapActive: Bool = false
 
+    /// 패닉 키가 실제로 등록됐는지. 실패했으면 UI가 그 조합을 광고하면 안 된다.
+    @Published private(set) var panicHotKeyRegistered: Bool = false
+
+    /// 설정창에서 마우스 버튼을 녹화하는 중. true인 동안 버튼 리매핑이 이벤트를 소비하지 않아
+    /// 이미 매핑된 버튼도 다시 지정할 수 있다.
+    @Published var isCapturingButton: Bool = false
+
     /// 로그인 시 자동 시작 여부. 진실 소스는 SMAppService — setLaunchAtLogin으로만 변경.
     @Published private(set) var launchAtLogin: Bool = false
 
@@ -35,6 +42,10 @@ final class AppState: ObservableObject {
         isEnabled = UserDefaults.standard.bool(forKey: Keys.isEnabled)
         hasAccessibility = AccessibilityPermission.isTrusted()
         launchAtLogin = LoginItemManager.isEnabled
+    }
+
+    func setPanicHotKeyRegistered(_ registered: Bool) {
+        panicHotKeyRegistered = registered
     }
 
     func setTapActive(_ active: Bool) {

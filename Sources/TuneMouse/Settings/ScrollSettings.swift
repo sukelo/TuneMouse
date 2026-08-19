@@ -26,24 +26,45 @@ struct ScrollConfig: Codable, Equatable {
 
     init() {}
 
-    // 구버전 저장본(누락 키) 호환: 누락 키는 기본값.
+    /// 값 범위 — UI 슬라이더가 지키는 범위와 같다. 디코드 시에도 강제해야 하는 이유:
+    /// 설정은 UserDefaults의 JSON이라 손으로 편집할 수 있고, 하류에서 `Int32(...)` 변환이
+    /// 일어난다. 범위를 벗어난 값이나 NaN이 들어오면 그 변환이 **트랩(크래시)** 한다.
+    private enum Limits {
+        static let speed = 0.1...10.0
+        static let pixelsPerNotch = 1.0...500.0
+        static let smoothStep = 1.0...500.0
+        static let smoothness = 0.0...1.0
+    }
+
+    /// NaN/무한대는 기본값으로, 나머지는 범위로 클램프.
+    private static func sanitize(_ value: Double, _ range: ClosedRange<Double>, default fallback: Double) -> Double {
+        guard value.isFinite else { return fallback }
+        return min(max(value, range.lowerBound), range.upperBound)
+    }
+
+    // 구버전 저장본(누락 키) 호환: 누락 키는 기본값. 숫자 값은 전부 sanitize.
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         invertVertical = try c.decodeIfPresent(Bool.self, forKey: .invertVertical) ?? false
         invertHorizontal = try c.decodeIfPresent(Bool.self, forKey: .invertHorizontal) ?? false
-        speedMultiplier = try c.decodeIfPresent(Double.self, forKey: .speedMultiplier) ?? 1.0
         linearScroll = try c.decodeIfPresent(Bool.self, forKey: .linearScroll) ?? false
-        pixelsPerNotch = try c.decodeIfPresent(Double.self, forKey: .pixelsPerNotch) ?? 40.0
         smoothEnabled = try c.decodeIfPresent(Bool.self, forKey: .smoothEnabled) ?? false
-        smoothStep = try c.decodeIfPresent(Double.self, forKey: .smoothStep) ?? 60.0
-        smoothness = try c.decodeIfPresent(Double.self, forKey: .smoothness) ?? 0.5
         passthrough = try c.decodeIfPresent(Bool.self, forKey: .passthrough) ?? false
+
+        speedMultiplier = Self.sanitize(
+            try c.decodeIfPresent(Double.self, forKey: .speedMultiplier) ?? 1.0, Limits.speed, default: 1.0)
+        pixelsPerNotch = Self.sanitize(
+            try c.decodeIfPresent(Double.self, forKey: .pixelsPerNotch) ?? 40.0, Limits.pixelsPerNotch, default: 40.0)
+        smoothStep = Self.sanitize(
+            try c.decodeIfPresent(Double.self, forKey: .smoothStep) ?? 60.0, Limits.smoothStep, default: 60.0)
+        smoothness = Self.sanitize(
+            try c.decodeIfPresent(Double.self, forKey: .smoothness) ?? 0.5, Limits.smoothness, default: 0.5)
     }
 }
 
 /// 글로벌 기본 + 앱별 오버라이드 구조(SPEC의 데이터 모델 원칙).
 /// Phase 2는 global만 사용. perApp/오버라이드 UI는 후속 단계.
-struct ScrollSettings: Codable, Equatable {
+struct ScrollSettings: Codable, Equatable, DefaultInitializable {
     var global = ScrollConfig()
     var perApp: [String: ScrollConfig] = [:]   // bundleID → override (후속)
 
@@ -70,16 +91,10 @@ final class ScrollSettingsStore: ObservableObject {
     private let key = "scrollSettings"
 
     init() {
-        if let data = UserDefaults.standard.data(forKey: key),
-           let decoded = try? JSONDecoder().decode(ScrollSettings.self, from: data) {
-            settings = decoded
-        } else {
-            settings = ScrollSettings()
-        }
+        settings = SettingsStorage.load(ScrollSettings.self, key: key, label: "스크롤 설정")
     }
 
     private func save() {
-        guard let data = try? JSONEncoder().encode(settings) else { return }
-        UserDefaults.standard.set(data, forKey: key)
+        SettingsStorage.save(settings, key: key, label: "스크롤 설정")
     }
 }

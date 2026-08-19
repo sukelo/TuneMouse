@@ -73,6 +73,7 @@ final class SmoothScrollAnimator: NSObject {
             wheel3: 0
         ) else { return }
         event.setIntegerValueField(.scrollWheelEventIsContinuous, value: 1) // 연속 표시 → 탭 우회
+        SynthesizedEvent.mark(event) // 우리 것 표시 — 이중 방어
         event.post(tap: .cgSessionEventTap)
     }
 }

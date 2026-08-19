@@ -75,6 +75,7 @@ final class ScrollAccelTransformer: EventTransformer {
             wheel3: 0
         ) else { return }
         event.setIntegerValueField(.scrollWheelEventIsContinuous, value: 1)
+        SynthesizedEvent.mark(event) // 우리 것 표시 — 탭으로 되돌아와도 재가공되지 않게
         event.post(tap: .cgSessionEventTap)
     }
 }

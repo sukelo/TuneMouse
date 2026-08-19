@@ -5,23 +5,43 @@ import Carbon.HIToolbox
 /// 기본 조합: ⌃⌥⌘M. 커스터마이즈 UI는 후속 단계.
 @MainActor
 final class PanicHotKey {
-    private var hotKeyRef: EventHotKeyRef?
-    private var handlerRef: EventHandlerRef?
+    // Carbon 핸들: 생성·해제 모두 메인에서만 일어나므로 실제 경합은 없다.
+    // `nonisolated(unsafe)`인 이유는 deinit(비격리)에서 정리해야 하기 때문 —
+    // 격리된 저장 프로퍼티는 deinit에서 읽을 수 없다.
+    nonisolated(unsafe) private var hotKeyRef: EventHotKeyRef?
+    nonisolated(unsafe) private var handlerRef: EventHandlerRef?
     private let onTrigger: () -> Void
+
+    /// 사람이 읽는 조합 이름 — UI가 하드코딩하지 않도록 여기서 제공.
+    static let displayName = "⌃⌥⌘M"
+
+    /// 실제로 등록에 성공했는지. **안전장치이므로 실패를 조용히 넘기면 안 된다** —
+    /// 다른 앱이 같은 조합을 선점했거나 핸들러 설치가 실패하면 패닉 키는 죽은 채로 남는데,
+    /// UI가 그걸 계속 광고하면 사용자는 있지도 않은 탈출구를 믿게 된다.
+    private(set) var isRegistered = false
 
     init(onTrigger: @escaping () -> Void) {
         self.onTrigger = onTrigger
     }
 
-    func register() {
-        guard hotKeyRef == nil else { return }
+    @discardableResult
+    func register() -> Bool {
+        guard hotKeyRef == nil else { return isRegistered }
 
         var eventType = EventTypeSpec(
             eventClass: OSType(kEventClassKeyboard),
             eventKind: UInt32(kEventHotKeyPressed)
         )
         let selfPtr = Unmanaged.passUnretained(self).toOpaque()
-        InstallEventHandler(GetApplicationEventTarget(), panicHotKeyHandler, 1, &eventType, selfPtr, &handlerRef)
+        // 핸들러 설치가 실패하면 핫키는 등록돼도 콜백이 오지 않는다 — 반드시 확인할 것.
+        let handlerStatus = InstallEventHandler(
+            GetApplicationEventTarget(), panicHotKeyHandler, 1, &eventType, selfPtr, &handlerRef
+        )
+        guard handlerStatus == noErr else {
+            Log.hotkey.error("패닉 키 핸들러 설치 실패: status=\(handlerStatus) — 패닉 키를 쓸 수 없습니다")
+            isRegistered = false
+            return false
+        }
 
         let hotKeyID = EventHotKeyID(signature: OSType(0x544D_4831 /* 'TMH1' */), id: 1)
         let modifiers = UInt32(controlKey | optionKey | cmdKey)
@@ -30,10 +50,17 @@ final class PanicHotKey {
             GetApplicationEventTarget(), 0, &hotKeyRef
         )
         if status == noErr {
-            Log.hotkey.notice("패닉 키 등록: ⌃⌥⌘M")
+            isRegistered = true
+            Log.hotkey.notice("패닉 키 등록: \(Self.displayName, privacy: .public)")
         } else {
-            Log.hotkey.error("패닉 키 등록 실패: status=\(status)")
+            isRegistered = false
+            hotKeyRef = nil
+            Log.hotkey.error("""
+                패닉 키 등록 실패: status=\(status) — 다른 앱이 \(Self.displayName, privacy: .public)을 \
+                선점했을 수 있습니다. 메뉴바 토글로 끄고 켤 수 있습니다.
+                """)
         }
+        return isRegistered
     }
 
     func unregister() {
@@ -45,6 +72,14 @@ final class PanicHotKey {
             RemoveEventHandler(handlerRef)
             self.handlerRef = nil
         }
+        isRegistered = false
+    }
+
+    /// Carbon 핸들러에 넘긴 포인터는 unretained — 등록된 채 해제되면 C 콜백에서 use-after-free.
+    /// (`unregister()`는 MainActor 격리라 deinit에서 부를 수 없어 정리를 인라인한다.)
+    deinit {
+        if let hotKeyRef { UnregisterEventHotKey(hotKeyRef) }
+        if let handlerRef { RemoveEventHandler(handlerRef) }
     }
 
     fileprivate func fire() {

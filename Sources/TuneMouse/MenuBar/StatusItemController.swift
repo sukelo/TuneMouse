@@ -143,7 +143,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     /// 메뉴 열린 시점의 frontmost 앱(우리 앱·미식별 앱은 제외).
     private func currentFrontApp() -> (id: String, name: String)? {
         guard let app = NSWorkspace.shared.frontmostApplication,
-              let id = app.bundleIdentifier, id != "com.tunemouse.TuneMouse" else { return nil }
+              let id = app.bundleIdentifier, id != Bundle.main.bundleIdentifier else { return nil }
         return (id, app.localizedName ?? id)
     }
 
