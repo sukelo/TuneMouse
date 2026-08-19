@@ -3,8 +3,26 @@ import CoreGraphics
 /// 변환기에 전달되는 컨텍스트(확장형). 앱별 오버라이드(축3)의 토대.
 /// `targetBundleID`는 이 이벤트의 오버라이드 대상 앱 — 스크롤은 **커서 아래 앱**,
 /// 버튼은 **포커스 앱**으로 파이프라인이 채운다(Phase 7).
-struct ProcessingContext {
-    let targetBundleID: String?
+///
+/// **지연 해석**: 커서-앱 조회는 WindowServer 동기 IPC라 비싸다. 앱별 오버라이드가 하나도
+/// 없으면 아무도 이 값을 읽지 않으므로 조회 자체가 일어나지 않는다
+/// (`ScrollSettings.resolved(for:)` / `ButtonMappings.resolved(for:)`가 빈 perApp을 단락 평가).
+/// 이벤트 1건 처리 동안만 살아 있고 메인 런루프 단일 스레드에서만 쓰인다.
+final class ProcessingContext {
+    private let resolve: () -> String?
+    /// 이중 옵셔널 — 바깥 nil = "아직 해석 안 함", 안쪽 nil = "대상 앱 못 찾음"으로 해석된 값.
+    private var cached: String??
+
+    init(resolve: @escaping () -> String?) {
+        self.resolve = resolve
+    }
+
+    var targetBundleID: String? {
+        if let cached { return cached }
+        let value = resolve()
+        cached = .some(value)
+        return value
+    }
 }
 
 /// 파이프라인에 끼우는 변환기. 각 변환기는 on/off + 파라미터를 가진다.

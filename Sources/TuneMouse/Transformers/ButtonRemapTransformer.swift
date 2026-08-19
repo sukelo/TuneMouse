@@ -15,11 +15,17 @@ final class ButtonRemapTransformer: EventTransformer {
 
     private static let modifierMask: CGEventFlags = [.maskCommand, .maskControl, .maskAlternate, .maskShift]
 
+    /// 리매핑 허용 최소 버튼 번호. 0=좌, 1=우는 **절대 소비하지 않는다** —
+    /// 소비되면 시스템 전역에서 클릭이 죽어 우리 메뉴바조차 누를 수 없게 된다.
+    /// UI가 막고 있지만 손상/수기 편집된 설정도 있으므로 여기서 하드 가드한다.
+    private static let minRemappableButton: Int64 = 2
+
     func transform(event: CGEvent, type: CGEventType, context: ProcessingContext) -> ProcessResult {
         switch type {
         case .otherMouseDown, .leftMouseDown, .rightMouseDown:
             let button = event.getIntegerValueField(.mouseEventButtonNumber)
-            let active = mappings.resolved(forBundleID: context.targetBundleID)
+            guard button >= Self.minRemappableButton else { return .passUnchanged }
+            let active = mappings.resolved(for: context)
             let mods = event.flags.intersection(Self.modifierMask).rawValue
             if let mapping = active.first(where: { $0.trigger.button == button && $0.trigger.modifiers == mods }) {
                 fire(mapping.action)

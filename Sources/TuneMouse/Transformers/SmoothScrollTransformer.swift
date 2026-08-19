@@ -19,7 +19,7 @@ final class SmoothScrollTransformer: EventTransformer {
     func transform(event: CGEvent, type: CGEventType, context: ProcessingContext) -> ProcessResult {
         guard type == .scrollWheel else { return .passUnchanged }
 
-        let config = settings.resolved(forBundleID: context.targetBundleID)
+        let config = settings.resolved(for: context)
         guard !config.passthrough, config.smoothEnabled else { return .passUnchanged }
 
         let lineV = Double(event.getIntegerValueField(.scrollWheelEventDeltaAxis1))

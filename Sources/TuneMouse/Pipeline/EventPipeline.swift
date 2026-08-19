@@ -13,10 +13,13 @@ final class EventPipeline: EventProcessor {
 
     func process(type: CGEventType, event: CGEvent) -> ProcessResult {
         // 스크롤은 커서 아래 창으로 라우팅되므로 오버라이드도 커서 기준. 그 외(버튼)는 포커스 앱.
-        let targetBundleID = type == .scrollWheel
-            ? contextProvider.bundleID(atScreenPoint: event.location)
-            : contextProvider.currentBundleID
-        let context = ProcessingContext(targetBundleID: targetBundleID)
+        // 해석은 지연 — 앱별 오버라이드가 없으면 변환기가 읽지 않아 창 조회가 아예 안 일어난다.
+        let location = event.location
+        let context = ProcessingContext { [contextProvider] in
+            type == .scrollWheel
+                ? contextProvider.bundleID(atScreenPoint: location)
+                : contextProvider.currentBundleID
+        }
         var current = event
         var replaced = false
 

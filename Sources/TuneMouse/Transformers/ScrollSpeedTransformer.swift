@@ -14,7 +14,7 @@ final class ScrollSpeedTransformer: EventTransformer {
 
     func transform(event: CGEvent, type: CGEventType, context: ProcessingContext) -> ProcessResult {
         guard type == .scrollWheel else { return .passUnchanged }
-        let config = settings.resolved(forBundleID: context.targetBundleID)
+        let config = settings.resolved(for: context)
         guard !config.passthrough, config.speedMultiplier != 1.0 else { return .passUnchanged }
         scale(event, axis: .vertical, multiplier: config.speedMultiplier, residual: &residualVertical)
         scale(event, axis: .horizontal, multiplier: config.speedMultiplier, residual: &residualHorizontal)

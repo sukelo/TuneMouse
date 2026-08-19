@@ -20,6 +20,10 @@ final class AppState: ObservableObject {
     /// 접근성 권한 허용 여부 (읽기 전용, refreshAccessibility로 갱신)
     @Published private(set) var hasAccessibility: Bool = false
 
+    /// 이벤트 탭이 **실제로** 설치돼 동작 중인지. `isEnabled`는 사용자의 의사일 뿐이고,
+    /// 권한/설치 실패/과부하 포기로 실제 동작하지 않을 수 있다 — 메뉴바 표시는 이 값을 따른다.
+    @Published private(set) var isTapActive: Bool = false
+
     /// 로그인 시 자동 시작 여부. 진실 소스는 SMAppService — setLaunchAtLogin으로만 변경.
     @Published private(set) var launchAtLogin: Bool = false
 
@@ -31,6 +35,13 @@ final class AppState: ObservableObject {
         isEnabled = UserDefaults.standard.bool(forKey: Keys.isEnabled)
         hasAccessibility = AccessibilityPermission.isTrusted()
         launchAtLogin = LoginItemManager.isEnabled
+    }
+
+    func setTapActive(_ active: Bool) {
+        if active != isTapActive {
+            isTapActive = active
+            Log.tap.notice("탭 실동작 상태: \(active, privacy: .public)")
+        }
     }
 
     func refreshAccessibility() {

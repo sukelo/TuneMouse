@@ -17,6 +17,11 @@ struct ButtonMappings: Codable, Equatable {
         if let bundleID, let override = perApp[bundleID] { return override }
         return global
     }
+
+    /// 핫패스용 해석 — 오버라이드가 없으면 포커스 앱 조회를 건너뛴다(ScrollSettings와 동일 패턴).
+    func resolved(for context: ProcessingContext) -> [ButtonMapping] {
+        perApp.isEmpty ? global : resolved(forBundleID: context.targetBundleID)
+    }
 }
 
 /// 버튼 매핑의 영속화 + 관찰 가능 상태.

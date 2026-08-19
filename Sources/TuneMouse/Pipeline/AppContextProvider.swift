@@ -31,11 +31,24 @@ final class AppContextProvider: NSObject {
             name: NSWorkspace.didActivateApplicationNotification,
             object: nil
         )
+        // PID는 재사용된다 — 종료된 앱의 캐시를 지우지 않으면 새 앱이 남의 오버라이드를 물려받는다.
+        NSWorkspace.shared.notificationCenter.addObserver(
+            self,
+            selector: #selector(appTerminated(_:)),
+            name: NSWorkspace.didTerminateApplicationNotification,
+            object: nil
+        )
     }
 
     @objc private func appActivated(_ note: Notification) {
         let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
         currentBundleID = app?.bundleIdentifier ?? NSWorkspace.shared.frontmostApplication?.bundleIdentifier
+    }
+
+    @objc private func appTerminated(_ note: Notification) {
+        guard let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication else { return }
+        pidBundleCache.removeValue(forKey: app.processIdentifier)
+        cursorCache = nil // 종료된 앱을 가리키고 있었을 수 있다
     }
 
     /// 화면 좌표(CG 좌상단 원점) 아래 최상단 일반 창의 앱 bundle id. 없으면 nil.

@@ -52,6 +52,12 @@ struct ScrollSettings: Codable, Equatable {
         if let bundleID, let override = perApp[bundleID] { return override }
         return global
     }
+
+    /// 핫패스용 해석. 오버라이드가 하나도 없으면 `targetBundleID`를 **읽지 않아**
+    /// 커서-앱 창 조회(WindowServer 동기 IPC)를 건너뛴다.
+    func resolved(for context: ProcessingContext) -> ScrollConfig {
+        perApp.isEmpty ? global : resolved(forBundleID: context.targetBundleID)
+    }
 }
 
 /// 스크롤 설정의 영속화(UserDefaults + JSON) + 관찰 가능 상태.

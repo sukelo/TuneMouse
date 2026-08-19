@@ -23,7 +23,7 @@ final class ScrollAccelTransformer: EventTransformer {
 
     func transform(event: CGEvent, type: CGEventType, context: ProcessingContext) -> ProcessResult {
         guard type == .scrollWheel else { return .passUnchanged }
-        let config = settings.resolved(forBundleID: context.targetBundleID)
+        let config = settings.resolved(for: context)
         guard !config.passthrough, config.linearScroll else { return .passUnchanged }
 
         if config.smoothEnabled {

@@ -52,10 +52,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             .sink { [weak self] enabled, hasAccessibility in
                 Log.tap.notice("상태 갱신: enabled=\(enabled, privacy: .public) hasAX=\(hasAccessibility, privacy: .public)")
                 let active = enabled && hasAccessibility
-                if !active { self?.buttonRemap.reset() } // 끌 때 소비 상태 초기화(스턱/잔류 방지)
+                if !active {
+                    self?.buttonRemap.reset()    // 소비 상태 초기화(스턱/잔류 방지)
+                    self?.smoothAnimator.reset() // 잔여 합성 스크롤 즉시 중단 — "끄면 꺼진다"
+                }
                 self?.tapController.setEnabled(active)
+                self?.appState.setTapActive(self?.tapController.isInstalled ?? false)
             }
             .store(in: &cancellables)
+
+        // 과부하로 탭을 포기하면 상태에 반영(메뉴바가 켜짐으로 거짓 표시되지 않게)
+        tapController.onOverload = { [weak self] in
+            self?.appState.setTapActive(false)
+        }
 
         // 패닉 키: 전역 단축키로 기능 즉시 on/off
         let hotKey = PanicHotKey(onTrigger: { [weak self] in
@@ -91,11 +100,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// 주기적 건강 점검. refreshAccessibility가 권한 변화를 @Published로 알리면
     /// 위 CombineLatest가 설치/해제를 처리한다. 탭이 켜져 있어야 하는데 죽었으면 복구.
+    ///
+    /// 설치 자체가 실패한 경우(권한 허용 직후 TCC 전파 지연 등)도 여기서 재시도한다.
+    /// 재시도가 없으면 앱이 재실행 전까지 조용히 무동작 상태로 남는다.
     private func watchdogTick() {
         appState.refreshAccessibility()
         if appState.isEnabled && appState.hasAccessibility {
-            tapController.ensureEnabledIfInstalled()
+            if tapController.isInstalled {
+                tapController.ensureEnabledIfInstalled()
+            } else if !tapController.isDisabledByOverload, tapController.install() {
+                Log.tap.notice("워치독: 탭 미설치 감지 → 재설치 성공")
+            }
         }
+        appState.setTapActive(tapController.isInstalled)
     }
 
     func applicationWillTerminate(_ notification: Notification) {

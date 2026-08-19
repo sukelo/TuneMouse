@@ -34,10 +34,10 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         buildMenu()
         updateIcon()
 
-        // 활성화 상태가 바뀌면 아이콘 갱신
-        appState.$isEnabled
+        // 활성화 의사 또는 탭 실동작 상태가 바뀌면 아이콘 갱신
+        Publishers.CombineLatest(appState.$isEnabled, appState.$isTapActive)
             .receive(on: RunLoop.main)
-            .sink { [weak self] _ in self?.updateIcon() }
+            .sink { [weak self] _, _ in self?.updateIcon() }
             .store(in: &cancellables)
     }
 
@@ -86,14 +86,25 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         statusItem.menu = menu
     }
 
+    /// 아이콘은 **실제 동작 여부**(isTapActive)를 표시한다.
+    /// 켜달라고 했는데 탭이 안 붙은 상태(권한/설치 실패/과부하)를 "켜짐"으로 보여주면 거짓말이 된다.
     private func updateIcon() {
         guard let button = statusItem.button else { return }
-        let symbol = appState.isEnabled ? "computermouse.fill" : "computermouse"
-        let desc = appState.isEnabled ? "TuneMouse (켜짐)" : "TuneMouse (꺼짐)"
+        let active = appState.isTapActive
+        let wanted = appState.isEnabled
+        let symbol = active ? "computermouse.fill" : "computermouse"
+        let desc: String
+        if active {
+            desc = "TuneMouse (켜짐)"
+        } else if wanted {
+            desc = "TuneMouse (동작 안 함 — 권한/오류 확인 필요)"
+        } else {
+            desc = "TuneMouse (꺼짐)"
+        }
         button.image = NSImage(systemSymbolName: symbol, accessibilityDescription: desc)
         button.image?.isTemplate = true
         // 꺼짐 상태를 흐리게 해서 시각적으로 구분
-        button.alphaValue = appState.isEnabled ? 1.0 : 0.4
+        button.alphaValue = active ? 1.0 : 0.4
         button.toolTip = desc
     }
 

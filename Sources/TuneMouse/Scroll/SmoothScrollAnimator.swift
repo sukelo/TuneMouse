@@ -36,6 +36,14 @@ final class SmoothScrollAnimator: NSObject {
         timer = nil
     }
 
+    /// 기능 비활성/패닉 키에서 호출 — 잔여 거리를 버리고 즉시 멈춘다.
+    /// 이게 없으면 "끔" 이후에도 합성 스크롤이 최대 1초 이상 계속 나간다.
+    func reset() {
+        remainingV = 0
+        remainingH = 0
+        stop()
+    }
+
     @objc private func tick() {
         let moveV = consume(&remainingV)
         let moveH = consume(&remainingH)
